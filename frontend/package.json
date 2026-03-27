@@ -15,7 +15,7 @@
     "axios": "^1.6.0",
     "epubjs": "^0.3.93",
     "lucide-react": "^0.309.0",
-    "next": "^15.3.0",
+    "next": "^16.2.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "zustand": "^4.4.7"
@@ -27,7 +27,7 @@
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "autoprefixer": "^10.4.16",
-    "eslint-config-next": "^15.5.14",
+    "eslint-config-next": "^16.2.1",
     "jest": "^30.3.0",
     "jest-environment-jsdom": "^30.3.0",
     "postcss": "^8.4.32",

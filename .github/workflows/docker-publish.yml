@@ -2,8 +2,8 @@ name: Docker
 
 on:
   push:
-    branches: [main, add-github-action-for-docker-build]
-    tags: ['v*']
+    branches: [main]
+    tags: ['*']
 
 jobs:
   build-and-push:
