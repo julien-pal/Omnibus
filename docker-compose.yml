@@ -1,0 +1,49 @@
+services:
+  omnibus:
+    build:
+      context: .
+      dockerfile: .docker/Dockerfile
+    container_name: omnibus
+    ports:
+      - "8080:8080"   # Next.js — main entry point (frontend + API proxy)
+      # - "8686:8686" # Expose Express directly if needed
+    volumes:
+      - ./config:/app/config
+      - ~/OneDrive/Bureau/Livres:/books
+    environment:
+      - NODE_ENV=production
+      - CONFIG_DIR=/app/config
+      # Override backend port if needed (default 8686):
+      # - PORT=8686
+    restart: unless-stopped
+
+  speaches:
+    image: ghcr.io/speaches-ai/speaches:latest-cuda
+    container_name: speaches
+    ports:
+      - 8000:8000
+    volumes:
+      - hf-hub-cache:/home/ubuntu/.cache/huggingface/hub
+    environment:
+      - WHISPER__NUM_WORKERS=4
+      - WHISPER__COMPUTE_TYPE=float16
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+  # speaches-cpu:
+  #   image: ghcr.io/speaches-ai/speaches:latest-cpu
+  #   container_name: speaches
+  #   ports:
+  #     - 8000:8000
+  #   volumes:
+  #     - hf-hub-cache:/home/ubuntu/.cache/huggingface/hub
+  #   restart: unless-stopped
+
+volumes:
+  hf-hub-cache:

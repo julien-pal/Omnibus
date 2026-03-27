@@ -1,0 +1,14 @@
+{
+  "extends": [
+    "plugin:@typescript-eslint/recommended",
+    "prettier"
+  ],
+  "parser": "@typescript-eslint/parser",
+  "rules": {
+    "@typescript-eslint/no-unused-vars": ["warn", { "argsIgnorePattern": "^_" }],
+    "@typescript-eslint/no-explicit-any": "warn",
+    "@typescript-eslint/no-require-imports": "off",
+    "@typescript-eslint/no-namespace": "off",
+    "prefer-const": "warn"
+  }
+}

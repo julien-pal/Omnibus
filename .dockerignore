@@ -1,0 +1,10 @@
+.git
+**/node_modules
+**/.next
+**/dist
+logs/
+*.log
+.env
+.env.*
+!backend/.env.example
+config/do-not-commit/

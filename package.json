@@ -1,0 +1,27 @@
+{
+  "name": "omnibus",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev --workspace=backend\" \"npm run dev --workspace=frontend\"",
+    "build": "npm run build --workspace=frontend",
+    "start": "npm run start --workspace=backend",
+    "test": "npm run test --workspace=backend && npm run test --workspace=frontend",
+    "lint": "npm run lint --workspace=frontend && npm run lint --workspace=backend",
+    "format": "prettier --write \"frontend/src/**/*.{ts,tsx}\" \"backend/src/**/*.ts\"",
+    "format:check": "prettier --check \"frontend/src/**/*.{ts,tsx}\" \"backend/src/**/*.ts\""
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^8.57.2",
+    "@typescript-eslint/parser": "^8.57.2",
+    "concurrently": "^8.2.0",
+    "eslint": "^8.57.1",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.5",
+    "prettier": "^3.8.1"
+  }
+}

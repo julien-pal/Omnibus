@@ -1,0 +1,55 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Backend",
+      "type": "node",
+      "request": "launch",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["--require", "ts-node/register"],
+      "args": ["src/index.ts"],
+      "cwd": "${workspaceFolder}/backend",
+      "env": {
+        "TS_NODE_PROJECT": "${workspaceFolder}/backend/tsconfig.json"
+      },
+      "sourceMaps": true,
+      "resolveSourceMapLocations": ["${workspaceFolder}/**", "!**/node_modules/**"],
+      "outFiles": ["${workspaceFolder}/backend/dist/**/*.js"],
+      "console": "integratedTerminal",
+      "skipFiles": ["<node_internals>/**"]
+    },
+    {
+      "name": "Frontend",
+      "type": "node",
+      "request": "launch",
+      "runtimeExecutable": "node",
+      "args": ["${workspaceFolder}/node_modules/next/dist/bin/next", "dev", "-p", "8080"],
+      "cwd": "${workspaceFolder}/frontend",
+      "sourceMaps": true,
+      "console": "integratedTerminal",
+      "skipFiles": ["<node_internals>/**"]
+    },
+    {
+      "name": "Frontend (Chrome)",
+      "type": "chrome",
+      "request": "launch",
+      "url": "http://localhost:8080",
+      "webRoot": "${workspaceFolder}/frontend",
+      "sourceMapPathOverrides": {
+        "webpack://_N_E/*": "${workspaceFolder}/frontend/*"
+      }
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Backend + Frontend",
+      "configurations": ["Backend", "Frontend"],
+      "stopAll": true
+    },
+    {
+      "name": "Backend + Frontend + Chrome",
+      "configurations": ["Backend", "Frontend", "Frontend (Chrome)"],
+      "stopAll": true
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.env
+*.log
+/config/
+!config/.gitkeep
+backend/config/
+
+# Next.js
+frontend/.next/
+frontend/tsconfig.tsbuildinfo

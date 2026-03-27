@@ -1,0 +1,52 @@
+{
+  "name": "omnibus-backend",
+  "version": "0.1.0",
+  "private": true,
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "nodemon --ignore config/ --exec ts-node src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "start:dev": "ts-node src/index.ts",
+    "lint": "eslint src --ext .ts",
+    "test": "jest"
+  },
+  "dependencies": {
+    "@xmldom/xmldom": "^0.9.8",
+    "adm-zip": "^0.5.16",
+    "axios": "^1.13.6",
+    "bcryptjs": "^2.4.3",
+    "chokidar": "^3.5.3",
+    "cors": "^2.8.5",
+    "epub-cfi-resolver": "^1.0.2",
+    "express": "^4.18.2",
+    "express-async-errors": "^3.1.1",
+    "form-data": "^4.0.5",
+    "helmet": "^7.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^1.4.5-lts.1",
+    "node-cron": "^3.0.3",
+    "nodemailer": "^8.0.4",
+    "uuid": "^9.0.0"
+  },
+  "devDependencies": {
+    "@types/adm-zip": "^0.5.8",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/form-data": "^2.2.1",
+    "@types/jest": "^30.0.0",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/multer": "^2.1.0",
+    "@types/node": "^25.5.0",
+    "@types/nodemailer": "^7.0.11",
+    "@types/supertest": "^7.2.0",
+    "@types/uuid": "^10.0.0",
+    "jest": "^30.3.0",
+    "nodemon": "^3.0.2",
+    "supertest": "^7.2.2",
+    "ts-jest": "^29.4.6",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
+  }
+}
