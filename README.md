@@ -26,8 +26,9 @@ It runs as a **single Docker container** with no external database required.
 - [Features](#features)
 - [Screenshots](#screenshots)
 - [Requirements](#requirements)
-- [Quick Start](#quick-start)
-- [Docker Compose](#docker-compose)
+- [Installation](#installation)
+  - [Docker](#docker)
+  - [Docker Compose](#docker-compose)
 - [Configuration](#configuration)
   - [Environment Variables](#environment-variables)
   - [Config Files](#config-files)
@@ -111,31 +112,51 @@ It runs as a **single Docker container** with no external database required.
 
 ---
 
-## Quick Start
+## Installation
 
-### Docker (recommended)
+### Docker
+
+Pull the latest image from Docker Hub:
 
 ```bash
-git clone https://github.com/yourname/omnibus.git
-cd omnibus
-docker compose up -d
+docker pull julienpal/omnibus:latest
+docker run -d \
+  --name omnibus \
+  -p 8087:8080 \
+  -v ./config:/app/config \
+  -v /path/to/your/books:/books \
+  -e CONFIG_DIR=/app/config \
+  --restart unless-stopped \
+  julienpal/omnibus:latest
 ```
 
 Open **http://localhost:8087** in your browser.
 
-### Local development
+### Docker Compose
 
-```bash
-git clone https://github.com/yourname/omnibus.git
-cd omnibus
-npm install
-npm run dev
+Create a `docker-compose.yml` file:
+
+```yaml
+services:
+  omnibus:
+    image: julienpal/omnibus:latest
+    ports:
+      - "8087:8080"
+    volumes:
+      - ./config:/app/config
+      - /path/to/your/books:/books
+    environment:
+      - CONFIG_DIR=/app/config
+    restart: unless-stopped
 ```
 
-| Service | URL |
-|---|---|
-| Frontend | http://localhost:8080 |
-| Backend API | http://localhost:8686 |
+Then run:
+
+```bash
+docker-compose up -d
+```
+
+Open **http://localhost:8087** in your browser.
 
 ---
 
