@@ -229,7 +229,7 @@ All settings are stored as JSON files under `./config/` (or the path set by `CON
 |---|---|---|
 | `CONFIG_DIR` | `<cwd>/config` | Override the config directory (useful for Docker volumes) |
 | `PORT` | `8686` | Override the backend Express port |
-| `BASE_PATH` | *(empty)* | Mount the app under a sub-path (e.g. `/omnibus`) — useful behind a reverse proxy |
+| `BASE_PATH` | *(empty)* | Mount the app under a sub-path (e.g. `/omnibus`) — applied at container startup |
 
 See [`backend/.env.example`](backend/.env.example) for a ready-to-copy template.
 
@@ -319,7 +319,7 @@ example.com {
 }
 ```
 
-> When using a sub-path, pass `BASE_PATH=/omnibus` as an environment variable to the container.
+> Pass `BASE_PATH` as an environment variable at runtime.
 
 ---
 

@@ -13,28 +13,29 @@ services:
     environment:
       - NODE_ENV=production
       - CONFIG_DIR=/app/config
+      - BASE_PATH=/omnibus
       # Override backend port if needed (default 8686):
       # - PORT=8686
     restart: unless-stopped
 
-  speaches:
-    image: ghcr.io/speaches-ai/speaches:latest-cuda
-    container_name: speaches
-    ports:
-      - 8000:8000
-    volumes:
-      - hf-hub-cache:/home/ubuntu/.cache/huggingface/hub
-    environment:
-      - WHISPER__NUM_WORKERS=4
-      - WHISPER__COMPUTE_TYPE=float16
-    restart: unless-stopped
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
+  # speaches:
+  #   image: ghcr.io/speaches-ai/speaches:latest-cuda
+  #   container_name: speaches
+  #   ports:
+  #     - 8000:8000
+  #   volumes:
+  #     - hf-hub-cache:/home/ubuntu/.cache/huggingface/hub
+  #   environment:
+  #     - WHISPER__NUM_WORKERS=4
+  #     - WHISPER__COMPUTE_TYPE=float16
+  #   restart: unless-stopped
+  #   deploy:
+  #     resources:
+  #       reservations:
+  #         devices:
+  #           - driver: nvidia
+  #             count: all
+  #             capabilities: [gpu]
 
   # speaches-cpu:
   #   image: ghcr.io/speaches-ai/speaches:latest-cpu
