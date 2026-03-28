@@ -229,6 +229,7 @@ All settings are stored as JSON files under `./config/` (or the path set by `CON
 |---|---|---|
 | `CONFIG_DIR` | `<cwd>/config` | Override the config directory (useful for Docker volumes) |
 | `PORT` | `8686` | Override the backend Express port |
+| `BASE_PATH` | *(empty)* | Mount the app under a sub-path (e.g. `/omnibus`) — useful behind a reverse proxy |
 
 See [`backend/.env.example`](backend/.env.example) for a ready-to-copy template.
 
@@ -288,6 +289,18 @@ server {
 }
 ```
 
+To serve Omnibus under a sub-path (e.g. `https://example.com/omnibus`), set `BASE_PATH=/omnibus` and configure nginx accordingly:
+
+```nginx
+location /omnibus/ {
+    proxy_pass         http://localhost:8087/omnibus/;
+    proxy_set_header   Host $host;
+    proxy_set_header   X-Real-IP $remote_addr;
+    proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_buffering    off;
+}
+```
+
 ### Caddy
 
 ```
@@ -295,6 +308,18 @@ omnibus.example.com {
     reverse_proxy localhost:8087
 }
 ```
+
+With a sub-path:
+
+```
+example.com {
+    handle_path /omnibus/* {
+        reverse_proxy localhost:8087
+    }
+}
+```
+
+> When using a sub-path, pass `BASE_PATH=/omnibus` as an environment variable to the container.
 
 ---
 
