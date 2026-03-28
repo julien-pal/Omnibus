@@ -16,13 +16,10 @@ COPY backend/package.json ./backend/
 RUN npm install --workspace=frontend
 COPY frontend/ ./frontend/
 ENV NEXT_TELEMETRY_DISABLED=1
-ENV BASE_PATH=/__OMNIBUS_BASE_PATH__
-ENV NEXT_PUBLIC_BASE_PATH=/__OMNIBUS_BASE_PATH__
 RUN npm run build --workspace=frontend
 
 # ── Stage 3: Production image ─────────────────────────────────────────────
 FROM node:20-alpine
-RUN apk add --no-cache ffmpeg
 WORKDIR /app
 
 # Backend runtime dependencies (no devDeps)

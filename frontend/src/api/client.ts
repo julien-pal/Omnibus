@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const apiClient = axios.create({
-  baseURL: `${process.env.NEXT_PUBLIC_BASE_PATH ?? ''}/api`,
+  baseURL: '/api',
   timeout: 30000,
   headers: { 'Content-Type': 'application/json' },
 });
@@ -23,10 +23,9 @@ apiClient.interceptors.response.use(
   (err) => {
     if (err.response?.status === 401 && typeof window !== 'undefined') {
       const path = window.location.pathname;
-      const loginPath = `${process.env.NEXT_PUBLIC_BASE_PATH ?? ''}/login`;
-      if (path !== loginPath) {
+      if (path !== '/login') {
         localStorage.removeItem('omnibus_token');
-        window.location.href = loginPath;
+        window.location.href = '/login';
       }
     }
     return Promise.reject(err);

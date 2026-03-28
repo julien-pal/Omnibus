@@ -51,7 +51,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         {/* Logo */}
         <div className="flex items-center gap-3 px-4 h-14 border-b border-surface-border flex-shrink-0">
           <div className="w-7 h-7 flex-shrink-0">
-            <Image src={`${process.env.NEXT_PUBLIC_BASE_PATH ?? ''}/logo.png`} alt="Omnibus" width={40} height={40} priority />
+            <Image src="/logo.png" alt="Omnibus" width={40} height={40} priority />
           </div>
 
           <span className="text-sm font-bold text-ink tracking-tight">Omnibus</span>

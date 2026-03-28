@@ -49,7 +49,7 @@ export default function Login() {
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="flex flex-col items-center mb-8">
-          <Image src={`${process.env.NEXT_PUBLIC_BASE_PATH ?? ''}/logo.png`} alt="Omnibus" width={56} height={56} className="mb-5 rounded-2xl shadow-glow-sm" />
+          <Image src="/logo.png" alt="Omnibus" width={56} height={56} className="mb-5 rounded-2xl shadow-glow-sm" />
           <h1 className="text-2xl font-bold text-ink tracking-tight">Omnibus</h1>
           <p className="text-sm text-ink-muted mt-1">{t('login_subtitle')}</p>
         </div>
