@@ -9,3 +9,5 @@ backend/config/
 # Next.js
 frontend/.next/
 frontend/tsconfig.tsbuildinfo
+
+.claude/*

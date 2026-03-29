@@ -859,73 +859,126 @@ export async function buildTranscript(
       logger.info(`[transcript] resuming: ${resumedCount} file(s) already done, skipping them`);
     }
 
-    // Worker: processes one file at a time from the queue
-    const processFile = async (i: number): Promise<void> => {
-      const file = audioFiles[i];
-      const filename = path.basename(file.path);
-      const duration = durations[i];
-      const globalOffset = globalOffsets[i];
+    // Build flat chunk queue across all files for maximum parallelism.
+    // Each worker picks the next available chunk regardless of which file it belongs to,
+    // saturating all Whisper server workers (e.g. NUM_WORKERS=4).
+    interface ChunkItem {
+      fileIndex: number;
+      chunkIndex: number;
+      startSec: number;
+      endSec: number;
+    }
 
-      // Skip if already transcribed in a previous run
+    const chunkQueue: ChunkItem[] = [];
+    const fileChunkCounts = new Map<number, number>();
+    const failedFiles = new Set<number>();
+
+    for (let i = 0; i < audioFiles.length; i++) {
+      const filename = path.basename(audioFiles[i].path);
+      // Skip files already transcribed (resume)
       if (transcriptFiles[filename]) {
         logger.info(`[transcript] file[${i}] skipped (already transcribed): ${filename}`);
-        progress.inProgress = progress.inProgress.filter((x) => x !== i);
-        progress.done.push(i);
+        if (!progress.done.includes(i)) progress.done.push(i);
+        continue;
+      }
+
+      const duration = durations[i];
+      let offset = 0;
+      let chunkIdx = 0;
+      while (offset < (duration || 3600)) {
+        const end = duration > 0 ? Math.min(offset + CHUNK_DURATION, duration) : offset + CHUNK_DURATION;
+        chunkQueue.push({ fileIndex: i, chunkIndex: chunkIdx, startSec: offset, endSec: end });
+        offset = end;
+        chunkIdx++;
+        if (duration > 0 && offset >= duration) break;
+        if (duration === 0) break;
+      }
+      fileChunkCounts.set(i, chunkIdx);
+    }
+
+    logger.info(`[transcript] chunk queue: ${chunkQueue.length} chunks across ${fileChunkCounts.size} files`);
+
+    // Per-file chunk results, indexed by chunkIndex for ordered assembly
+    const fileChunkResults = new Map<number, Map<number, TranscriptWord[]>>();
+    for (const [i] of fileChunkCounts) {
+      fileChunkResults.set(i, new Map());
+      progress.fileProgress[i] = 0;
+    }
+    updateProgress();
+
+    const processChunk = async (item: ChunkItem): Promise<void> => {
+      const { fileIndex, chunkIndex, startSec, endSec } = item;
+
+      // Skip if this file already failed on a previous chunk
+      if (failedFiles.has(fileIndex)) return;
+
+      const file = audioFiles[fileIndex];
+      const globalOffset = globalOffsets[fileIndex];
+
+      // Mark file as in-progress (idempotent)
+      if (!progress.inProgress.includes(fileIndex)) {
+        progress.inProgress.push(fileIndex);
+        logger.info(`[transcript] file[${fileIndex}] start: ${file.path} (${durations[fileIndex].toFixed(1)}s)`);
+        updateProgress();
+      }
+
+      logger.info(
+        `[transcript] file[${fileIndex}] chunk[${chunkIndex}]: extracting ${startSec.toFixed(0)}s → ${endSec.toFixed(0)}s`,
+      );
+
+      let tmpPath: string;
+      try {
+        tmpPath = await extractClip(file.path, startSec, endSec - startSec);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        logger.error(`[transcript] file[${fileIndex}] chunk[${chunkIndex}] extract ERROR: ${msg}`);
+        progress.fileErrors[fileIndex] = msg;
+        failedFiles.add(fileIndex);
         updateProgress();
         return;
       }
 
-      logger.info(`[transcript] file[${i}] start: ${file.path} (${duration.toFixed(1)}s)`);
-      progress.inProgress.push(i);
-      progress.fileProgress[i] = 0;
+      try {
+        const result = await transcribeFile(tmpPath, config, true);
+        logger.info(
+          `[transcript] file[${fileIndex}] chunk[${chunkIndex}]: transcribed, words=${result.words.length}, text=${result.text.length}chars`,
+        );
+
+        const words: TranscriptWord[] = result.words.map((w) => ({
+          text: w.text,
+          start: startSec + w.start,
+          end: startSec + w.end,
+          globalStart: globalOffset + startSec + w.start,
+        }));
+
+        fileChunkResults.get(fileIndex)!.set(chunkIndex, words);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        logger.error(`[transcript] file[${fileIndex}] chunk[${chunkIndex}] transcribe ERROR: ${msg}`);
+        progress.fileErrors[fileIndex] = msg;
+        failedFiles.add(fileIndex);
+        updateProgress();
+        return;
+      } finally {
+        fs.unlink(tmpPath, () => {});
+      }
+
+      // Update progress
+      progress.fileProgress[fileIndex] = (progress.fileProgress[fileIndex] || 0) + (endSec - startSec);
       updateProgress();
 
-      try {
+      // Check if all chunks for this file are now complete
+      const completedChunks = fileChunkResults.get(fileIndex)!;
+      const totalChunks = fileChunkCounts.get(fileIndex)!;
+      if (completedChunks.size === totalChunks) {
+        // Assemble words in chunk order
         const fileWords: TranscriptWord[] = [];
-        let fileOffset = 0;
-        let chunkIndex = 0;
-        while (fileOffset < (duration || 3600)) {
-          const chunkEnd =
-            duration > 0
-              ? Math.min(fileOffset + CHUNK_DURATION, duration)
-              : fileOffset + CHUNK_DURATION;
-          logger.info(
-            `[transcript] file[${i}] chunk[${chunkIndex}]: extracting ${fileOffset.toFixed(0)}s → ${chunkEnd.toFixed(0)}s`,
-          );
-          const tmpPath = await extractClip(file.path, fileOffset, chunkEnd - fileOffset);
-          logger.info(`[transcript] file[${i}] chunk[${chunkIndex}]: clip extracted → ${tmpPath}`);
-
-          let result;
-          try {
-            result = await transcribeFile(tmpPath, config, true);
-            logger.info(
-              `[transcript] file[${i}] chunk[${chunkIndex}]: transcribed, words=${result.words.length}, text=${result.text.length}chars`,
-            );
-          } finally {
-            fs.unlink(tmpPath, () => {});
-          }
-
-          for (const w of result.words) {
-            fileWords.push({
-              text: w.text,
-              start: fileOffset + w.start,
-              end: fileOffset + w.end,
-              globalStart: globalOffset + fileOffset + w.start,
-            });
-          }
-
-          fileOffset = chunkEnd;
-          chunkIndex++;
-          progress.fileProgress[i] = fileOffset;
-          updateProgress();
-
-          if (duration > 0 && fileOffset >= duration) break;
-          if (duration === 0) break;
+        for (let c = 0; c < totalChunks; c++) {
+          fileWords.push(...(completedChunks.get(c) || []));
         }
 
-        logger.info(
-          `[transcript] file[${i}] done: ${fileWords.length} words — saving incrementally`,
-        );
+        const filename = path.basename(file.path);
+        logger.info(`[transcript] file[${fileIndex}] done: ${fileWords.length} words — saving incrementally`);
         transcriptFiles[filename] = fileWords;
         saveTranscript({
           bookPath,
@@ -934,24 +987,19 @@ export async function buildTranscript(
           totalDuration,
           complete: false,
         });
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        logger.error(`[transcript] file[${i}] ERROR: ${msg}`);
-        progress.fileErrors[i] = msg;
-      }
 
-      progress.inProgress = progress.inProgress.filter((x) => x !== i);
-      progress.done.push(i);
-      updateProgress();
+        progress.inProgress = progress.inProgress.filter((x) => x !== fileIndex);
+        progress.done.push(fileIndex);
+        updateProgress();
+      }
     };
 
-    // Launch workers that drain the queue in parallel
+    // Launch workers that drain the chunk queue in parallel
     const concurrency = Math.max(1, config.concurrency ?? 1);
-    const queue = audioFiles.map((_, i) => i);
-    const workers = Array.from({ length: Math.min(concurrency, audioFiles.length) }, async () => {
-      while (queue.length > 0) {
-        const i = queue.shift();
-        if (i !== undefined) await processFile(i);
+    const workers = Array.from({ length: Math.min(concurrency, chunkQueue.length) }, async () => {
+      while (chunkQueue.length > 0) {
+        const item = chunkQueue.shift();
+        if (item) await processChunk(item);
       }
     });
     await Promise.all(workers);
