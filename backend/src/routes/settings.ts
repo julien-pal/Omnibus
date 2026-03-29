@@ -42,20 +42,22 @@ router.put('/app', (req, res) => {
 
 router.get('/whisper', (_req, res) => {
   const config = getConfig('app');
-  res.json(config.whisper || { baseUrl: '', apiKey: '', model: 'whisper-1' });
+  res.json(config.whisper || { baseUrl: '', apiKey: '', model: 'whisper-1', concurrency: 1 });
 });
 
 router.put('/whisper', (req, res) => {
-  const { baseUrl, apiKey, model } = req.body as {
+  const { baseUrl, apiKey, model, concurrency } = req.body as {
     baseUrl?: string;
     apiKey?: string;
     model?: string;
+    concurrency?: number;
   };
   const config = getConfig('app');
   config.whisper = {
     baseUrl: baseUrl ?? config.whisper?.baseUrl ?? '',
     apiKey: apiKey ?? config.whisper?.apiKey ?? '',
     model: model ?? config.whisper?.model ?? 'whisper-1',
+    concurrency: concurrency ?? config.whisper?.concurrency ?? 1,
   };
   saveConfig('app', config);
   res.json({ ok: true });
