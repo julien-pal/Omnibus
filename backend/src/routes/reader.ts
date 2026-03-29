@@ -81,13 +81,13 @@ router.get('/progress', (req, res) => {
 
 // PATCH /api/reader/progress
 router.patch('/progress', (req, res) => {
-  const { bookPath, cfi, page, chapterTitle, percentage, updatedAt, epubPath } = req.body;
+  const { bookPath, cfi, page, chapterTitle, percentage, updatedAt, epubPath, snippet: clientSnippet } = req.body;
   if (!bookPath) return res.status(400).json({ error: 'bookPath required' });
   const existing = getProgress(bookPath);
-  let snippet: string | undefined;
-  if (epubPath && cfi) {
+  let snippet: string | undefined = clientSnippet || undefined;
+  if (!snippet && epubPath && cfi) {
     try {
-      snippet = getTextAtCfi(epubPath, cfi, 300);
+      snippet = getTextAtCfi(epubPath, cfi, 300) || undefined;
     } catch {
       /* ignore */
     }

@@ -20,20 +20,32 @@ export interface EpubTextMap {
   totalChars: number;
 }
 
+function normalizeUnicode(s: string): string {
+  return s
+    .replace(/[\u2018\u2019\u201A\u201B\u2032\u2035]/g, "'") // curly/prime apostrophes → '
+    .replace(/[\u201C\u201D\u201E\u201F\u2033\u2036]/g, '"') // curly double quotes → "
+    .replace(/[\u00AB\u00BB\u2039\u203A]/g, '"')             // guillemets → "
+    .replace(/[\u2013\u2014\u2015]/g, '-')                   // en/em dash → -
+    .replace(/\u2026/g, '...')                               // ellipsis → ...
+    .replace(/\u00A0/g, ' ');                                // non-breaking space → space
+}
+
 function stripHtml(html: string): string {
-  return html
-    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, ' ')
-    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, ' ')
-    .replace(/&nbsp;/gi, ' ')
-    .replace(/&amp;/gi, '&')
-    .replace(/&lt;/gi, '<')
-    .replace(/&gt;/gi, '>')
-    .replace(/&quot;/gi, '"')
-    .replace(/&#39;/gi, "'")
-    .replace(/(\w)<[^>]+>(\w)/g, '$1$2')
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
+  return normalizeUnicode(
+    html
+      .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, ' ')
+      .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, ' ')
+      .replace(/&nbsp;/gi, ' ')
+      .replace(/&amp;/gi, '&')
+      .replace(/&lt;/gi, '<')
+      .replace(/&gt;/gi, '>')
+      .replace(/&quot;/gi, '"')
+      .replace(/&#39;/gi, "'")
+      .replace(/(\w)<[^>]+>(\w)/g, '$1$2')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim(),
+  );
 }
 
 function parseOpf(zip: AdmZip): {
@@ -197,8 +209,7 @@ export function getTextAtCfi(epubPath: string, cfi: string, maxChars = 500): str
     }
     logger.info(`[cfi] found zip entry: "${htmlEntry.entryName}"`);
 
-    const silentHandler = { warning: () => {}, error: () => {}, fatalError: () => {} };
-    const parser = new DOMParser({ errorHandler: silentHandler });
+    const parser = new DOMParser({ onError: () => {} });
 
     const htmlContent = htmlEntry.getData().toString('utf8');
     const plainText = stripHtml(htmlContent);
@@ -322,8 +333,7 @@ export function generateCfiFromMatchedText(
     if (!entry) return null;
 
     const html = entry.getData().toString('utf8');
-    const silentHandler = { warning: () => {}, error: () => {}, fatalError: () => {} };
-    const parser = new DOMParser({ errorHandler: silentHandler });
+    const parser = new DOMParser({ onError: () => {} });
     const doc = parser.parseFromString(html, 'application/xhtml+xml');
 
     const body = doc.getElementsByTagName('body')[0];

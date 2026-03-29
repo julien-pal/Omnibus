@@ -143,7 +143,7 @@ export async function transcribeFile(
   }
 
   const words: WhisperSegment[] = (data.segments ?? []).map((s) => ({
-    text: s.text,
+    text: s.text.replace(/^[\s\p{P}]+/u, ''),
     start: s.start,
     end: s.end,
   }));

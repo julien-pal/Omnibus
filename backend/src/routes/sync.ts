@@ -74,11 +74,13 @@ router.post('/ebook-to-audio', async (req, res) => {
     ebookPct,
     bookPath,
     cfi,
+    audioFiles,
   } = req.body as {
     epubPath?: string;
     ebookPct: number;
     bookPath: string;
     cfi?: string;
+    audioFiles?: Array<{ path: string }>;
   };
 
   if (!bookPath) {
@@ -104,7 +106,7 @@ router.post('/ebook-to-audio', async (req, res) => {
     `[sync:e→t] trigger — ebook ${(ebookPct * 100).toFixed(1)}% | cfi: ${effectiveCfi ?? 'n/a'} | chapter: "${readerProg?.chapterTitle ?? 'n/a'}"`,
   );
 
-  const result = await computeEbookToAudio(epubPath, ebookPct, bookPath, effectiveCfi);
+  const result = await computeEbookToAudio(epubPath, ebookPct, bookPath, effectiveCfi, readerProg?.snippet, audioFiles);
   res.json(result);
 });
 

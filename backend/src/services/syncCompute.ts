@@ -23,6 +23,7 @@ export interface TranscriptWord {
   start: number;
   end: number;
   globalStart: number; // start offset in seconds from beginning of book (multi-file)
+  fileName?: string; // source audio file name
 }
 
 export interface AudioTranscript {
@@ -85,8 +86,8 @@ function saveTranscript(t: AudioTranscript): void {
 
 /** Flatten all files into a single word array sorted by globalStart. */
 export function flattenTranscriptWords(transcript: AudioTranscript): TranscriptWord[] {
-  return Object.values(transcript.files)
-    .flat()
+  return Object.entries(transcript.files)
+    .flatMap(([fileName, words]) => words.map((w) => ({ ...w, fileName })))
     .sort((a, b) => a.globalStart - b.globalStart);
 }
 
@@ -228,6 +229,25 @@ export function buildSyncMap(bookPath: string, epubPath: string): SyncMapEntry[]
           bestCharPos = item.charStart + offset;
           bestHref = item.absoluteHref;
         }
+      }
+    }
+
+    // If still no match, split phrase on punctuation and try each sub-phrase
+    if (bestScore < 0.4) {
+      const subPhrases = phrase
+        .split(/[\p{P}]+/u)
+        .map((s) => s.trim())
+        .filter((s) => s.split(/\s+/).length >= 3);
+      for (const sub of subPhrases) {
+        for (const item of searchItems) {
+          const { offset, score } = fuzzySearch(item.text, sub);
+          if (score > bestScore && offset >= 0) {
+            bestScore = score;
+            bestCharPos = item.charStart + offset;
+            bestHref = item.absoluteHref;
+          }
+        }
+        if (bestScore >= 0.4) break;
       }
     }
 
@@ -1056,6 +1076,8 @@ export async function computeEbookToAudio(
   ebookPct: number,
   bookPath: string,
   cfi?: string,
+  savedSnippet?: string,
+  audioFiles?: Array<{ path: string }>,
 ): Promise<SyncResult> {
   logger.info(`[sync:e→t] ebookPct=${(ebookPct * 100).toFixed(1)}% cfi=${cfi ?? 'none'}`);
   const transcript = loadTranscript(bookPath);
@@ -1068,9 +1090,11 @@ export async function computeEbookToAudio(
     `[sync:e→t] transcript: ${allWords.length} segments, duration=${transcript.totalDuration.toFixed(1)}s`,
   );
 
-  // Prefer CFI-based text extraction for precision; fall back to percentage
-  let snippet = '';
-  if (cfi) {
+  // Priority: saved snippet from progress > CFI extraction > percentage fallback
+  let snippet = savedSnippet?.trim() ?? '';
+  if (snippet) {
+    logger.info(`[sync:e→t] using saved snippet (${snippet.length} chars): "${snippet.slice(0, 120)}"`);
+  } else if (cfi) {
     snippet = getTextAtCfi(epubPath, cfi, 300);
     logger.info(`[sync:e→t] CFI snippet (${snippet.length} chars): "${snippet.slice(0, 120)}"`);
   }
@@ -1121,28 +1145,17 @@ export async function computeEbookToAudio(
   const percentage =
     transcript.totalDuration > 0 ? audioSeconds / transcript.totalDuration : ebookPct;
 
-  // Find which file and offset within file using globalStart of first word per file.
-  // This is robust against empty transcript files (no words = skip).
+  // Find fileIndex by matching the word's fileName against the audio files list.
+  // Use matchedWord.start (file-relative position) for fileSeconds.
   let fileIndex = 0;
-  let fileSeconds = audioSeconds;
-  const filenames = Object.keys(transcript.files);
-  if (filenames.length > 0) {
-    const fileStarts: Array<{ audioIdx: number; globalStart: number }> = [];
-    for (let i = 0; i < filenames.length; i++) {
-      const words = transcript.files[filenames[i]];
-      if (words && words.length > 0) {
-        fileStarts.push({ audioIdx: i, globalStart: words[0].globalStart });
-      }
-    }
-    let matched = fileStarts[0] ?? null;
-    for (const fs of fileStarts) {
-      if (fs.globalStart <= audioSeconds) matched = fs;
-      else break;
-    }
-    if (matched) {
-      fileIndex = matched.audioIdx;
-      fileSeconds = audioSeconds - matched.globalStart;
-    }
+  const fileSeconds = matchedWord.start;
+  if (matchedWord.fileName) {
+    const list = audioFiles ?? Object.keys(transcript.files).sort().map((f) => ({ path: f }));
+    const idx = list.findIndex((f) => path.basename(f.path) === matchedWord.fileName);
+    logger.info(
+      `[sync:e→t] fileName="${matchedWord.fileName}" audioFiles=${audioFiles ? audioFiles.length : 'none(fallback)'} → idx=${idx}`,
+    );
+    if (idx >= 0) fileIndex = idx;
   }
 
   logger.info(

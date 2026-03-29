@@ -65,6 +65,9 @@ export default function ReaderModal() {
   const SWIPE_THRESHOLD = 50;
   const epubPathRef = useRef<string | null>(null);
   epubPathRef.current = book?.ebookFiles?.[0]?.path ?? null;
+  const currentSnippetRef = useRef<string>('');
+  const initialLoadDoneRef = useRef(false);
+  const syncNavigatingRef = useRef(false);
 
   const [loading, setLoading] = useState(true);
   const [syncReady, setSyncReady] = useState(false);
@@ -74,6 +77,7 @@ export default function ReaderModal() {
     audioSeconds?: number;
     syncInfo?: syncInfo;
     precomputedSync?: {
+      cfi?: string;
       spineHref?: string;
       percentage?: number;
       confidence: string;
@@ -118,21 +122,21 @@ export default function ReaderModal() {
   const [pageMargin, setPageMargin] = useState(2); // percentage
 
   const fileUrl = book?.ebookFiles?.[0]
-    ? `/api/reader/file?path=${encodeURIComponent(book.ebookFiles[0].path)}`
+    ? `${process.env.NEXT_PUBLIC_BASE_PATH ?? ''}/api/reader/file?path=${encodeURIComponent(book.ebookFiles[0].path)}`
     : null;
 
   const bookPath = book?.path ?? '';
 
   // ── persist progress ────────────────────────────────────────────────────────
   const saveProgressNow = useCallback(async () => {
-    if (!bookPath || (!currentCfiRef.current && !currentPctRef.current)) return;
+    if (!bookPath || !currentCfiRef.current) return;
     await readerService
       .updateProgress({
         bookPath,
-        cfi: currentCfiRef.current || undefined,
-        percentage: currentPctRef.current,
+        cfi: currentCfiRef.current,
+        ...(currentPctRef.current && { percentage: currentPctRef.current }),
         ...(currentChapterLabelRef.current && { chapterTitle: currentChapterLabelRef.current }),
-        epubPath: epubPathRef.current || undefined,
+        ...(currentSnippetRef.current && { snippet: currentSnippetRef.current }),
       })
       .catch(() => {});
     queryClient.invalidateQueries({ queryKey: ['reader-progress-all'] });
@@ -240,6 +244,8 @@ export default function ReaderModal() {
                       syncService
                         .transcriptToEbook({
                           bookPath,
+                          audioPct: playerPct,
+                          epubPath: epubPath!,
                           audioSeconds: audioSeconds ?? 0,
                           fileIndex: audioFileIndex ?? undefined,
                         })
@@ -285,6 +291,7 @@ export default function ReaderModal() {
                           bookPath,
                           ebookPct: readerPct,
                           cfi: savedCfiRef.current ?? undefined,
+                          audioFiles: book?.audiobookFiles?.map((f) => ({ path: f.path })),
                         })
                         .catch(() => null),
                     ]);
@@ -482,6 +489,26 @@ export default function ReaderModal() {
         const cfi = location.start.cfi;
         const href = location.start.href || '';
         currentCfiRef.current = cfi;
+        // Extract visible text from current page
+        try {
+          const contents = rendition.getContents() as unknown as Array<{
+            range: (cfi: string) => Range;
+            document?: Document;
+          }>;
+          if (contents?.length) {
+            const domRange = contents[0].range(cfi);
+            const doc = domRange?.startContainer?.ownerDocument;
+            if (doc && domRange) {
+              const tailRange = doc.createRange();
+              tailRange.setStart(domRange.startContainer, domRange.startOffset);
+              tailRange.setEndAfter(doc.body);
+              const text = tailRange.toString().replace(/\s+/g, ' ').trim();
+              currentSnippetRef.current = text.slice(0, 300);
+            }
+          }
+        } catch {
+          // ignore
+        }
         setCurrentSection(href);
         // Update current chapter label for progress saving
         // Strip fragment (#anchor) before matching — epubjs may include it in href
@@ -495,7 +522,12 @@ export default function ReaderModal() {
         if (pct) {
           currentPctRef.current = pct;
           setPercentage(pct);
+        }
+        if (initialLoadDoneRef.current && !syncNavigatingRef.current) {
           saveProgressNow();
+        } else {
+          initialLoadDoneRef.current = true;
+          syncNavigatingRef.current = false;
         }
       });
 
@@ -524,19 +556,25 @@ export default function ReaderModal() {
             // Sync is text-based only — percentages are display data, never used for navigation.
             if (epubPathForSync) {
               try {
+                const { position: playerPos, duration: playerDur } = usePlayerStore.getState();
+                const audioPctForSync = playerDur > 0 ? playerPos / playerDur : 0;
                 const t2e = await syncService.transcriptToEbook({
                   bookPath,
+                  audioPct: audioPctForSync,
+                  epubPath: epubPathForSync,
                   audioSeconds: asec ?? 0,
                   fileIndex: afi,
                 });
                 if (t2e.data.confidence === 'high') {
                   if (t2e.data.cfi) {
                     if (t2e.data.matchedText) pendingHighlightRef.current = t2e.data.matchedText;
+                    syncNavigatingRef.current = true;
                     rendition.display(t2e.data.cfi);
                     return;
                   }
                   if (t2e.data.spineHref) {
                     if (t2e.data.matchedText) pendingHighlightRef.current = t2e.data.matchedText;
+                    syncNavigatingRef.current = true;
                     rendition.display(t2e.data.spineHref);
                     return;
                   }
@@ -552,7 +590,7 @@ export default function ReaderModal() {
           // Apply pending cross-format sync (from dialog)
           if (syncTargetPctRef.current !== null) {
             const cfi = epubBook.locations.cfiFromPercentage(syncTargetPctRef.current);
-            if (cfi) rendition.display(cfi);
+            if (cfi) { syncNavigatingRef.current = true; rendition.display(cfi); }
             syncTargetPctRef.current = null;
           } else if (currentCfiRef.current) {
             // Now that locations are ready, compute accurate percentage and save
@@ -576,6 +614,7 @@ export default function ReaderModal() {
             bookPath,
             cfi: currentCfiRef.current || undefined,
             percentage: currentPctRef.current,
+            ...(currentSnippetRef.current && { snippet: currentSnippetRef.current }),
           })
           .then(() => queryClient.invalidateQueries({ queryKey: ['reader-progress-all'] }))
           .catch(() => {});
@@ -738,6 +777,7 @@ export default function ReaderModal() {
       }
     }
     searchHighlightCfiRef.current = r.cfi;
+    syncNavigatingRef.current = true;
     rendition.display(r.cfi).then(() => {
       try {
         rendition.annotations.highlight(r.cfi, {}, undefined, 'omnibus-search-hl', {
@@ -764,6 +804,7 @@ export default function ReaderModal() {
           bookPath,
           cfi: currentCfiRef.current || undefined,
           percentage: currentPctRef.current,
+          ...(currentSnippetRef.current && { snippet: currentSnippetRef.current }),
         })
         .then(() => queryClient.invalidateQueries({ queryKey: ['reader-progress-all'] }))
         .catch(() => {});
@@ -1366,13 +1407,13 @@ export default function ReaderModal() {
               // Sync is text-based only — percentages are display data, never used for navigation.
               // If no high-confidence text match was found, load epub at saved position (no nav).
               if (precomputedSync?.confidence === 'high') {
-                if (precomputedSync.spineHref) {
+                if (precomputedSync.matchedText)
+                  pendingHighlightRef.current = precomputedSync.matchedText;
+                if (precomputedSync.cfi) {
+                  savedCfiRef.current = precomputedSync.cfi;
+                } else if (precomputedSync.spineHref) {
                   syncTargetHrefRef.current = precomputedSync.spineHref;
-                  if (precomputedSync.matchedText)
-                    pendingHighlightRef.current = precomputedSync.matchedText;
-                }
-                // percentage-only result from sync map: also valid (sync map built from text alignment)
-                else if (precomputedSync.percentage) {
+                } else if (precomputedSync.percentage) {
                   syncTargetPctRef.current = precomputedSync.percentage;
                 }
               }
