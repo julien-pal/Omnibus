@@ -228,16 +228,16 @@ export default function LibrarySettings() {
             </div>
             <p className="text-xs text-ink-faint mt-1">{t('libsettings_path_hint')}</p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 justify-end">
+            <button onClick={() => setShowAdd(false)} className="btn-secondary text-sm">
+              {t('libsettings_cancel')}
+            </button>
             <button
               onClick={handleAdd}
               disabled={adding || !newPath}
               className="btn-primary text-sm"
             >
               {adding ? t('libsettings_adding') : t('libsettings_add')}
-            </button>
-            <button onClick={() => setShowAdd(false)} className="btn-secondary text-sm">
-              {t('libsettings_cancel')}
             </button>
           </div>
         </div>

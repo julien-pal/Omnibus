@@ -21,6 +21,7 @@ import {
   Eye,
   EyeOff,
   Send,
+  BookCheck,
 } from 'lucide-react';
 import { libraryService, playerService, readerService } from '@/api';
 import { settingsService, FollowEntry } from '@/api/settingsService';
@@ -109,6 +110,10 @@ export default function Library() {
         'grid'
       : 'grid',
   );
+  const [ownedOnly, setOwnedOnly] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    return localStorage.getItem('library_ownedOnly') === 'true';
+  });
 
   function setSelectedLibrary(lib: (import('@/types').Library & { type: string }) | null) {
     setSelectedLibraryState(lib);
@@ -160,6 +165,13 @@ export default function Library() {
     } catch { /* ignore */ }
   }
 
+  function toggleOwnedOnly() {
+    setOwnedOnly((v) => {
+      const next = !v;
+      if (typeof window !== 'undefined') localStorage.setItem('library_ownedOnly', String(next));
+      return next;
+    });
+  }
   function toggleMergeSeries() {
     setMergeSeries((v) => {
       const next = !v;
@@ -367,14 +379,20 @@ export default function Library() {
 
   const q = searchQuery.trim().toLowerCase();
   const filteredBooks = useMemo(() => {
-    if (!q) return allBooks;
-    return allBooks.filter(
+    let books = allBooks;
+    if (ownedOnly) {
+      books = books.filter(
+        (b) => (b.ebookFiles?.length ?? 0) > 0 || (b.audiobookFiles?.length ?? 0) > 0,
+      );
+    }
+    if (!q) return books;
+    return books.filter(
       (b) =>
         b.title?.toLowerCase().includes(q) ||
         b.author?.toLowerCase().includes(q) ||
         (b.series || extractSeries(b))?.toLowerCase().includes(q),
     );
-  }, [allBooks, q]);
+  }, [allBooks, q, ownedOnly]);
 
   const seriesMap = useMemo(() => buildSeriesGroups(filteredBooks), [filteredBooks]);
 
@@ -455,13 +473,13 @@ export default function Library() {
         {/* Mobile row */}
         <div className="flex md:hidden items-center gap-2 px-3 h-11">
           {librariesLoading && (
-            <div className="h-7 w-32 bg-surface-elevated rounded-lg animate-pulse" />
+            <div className="h-7 w-24 bg-surface-elevated rounded-lg animate-pulse flex-shrink-0" />
           )}
           {!librariesLoading && (
-            <div className="relative" ref={libPickerRef}>
+            <div className="relative flex-shrink-0" ref={libPickerRef}>
               <button
                 onClick={() => setLibPickerOpen((v) => !v)}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all bg-indigo-500/15 text-indigo-300 hover:bg-indigo-500/25"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-sm font-medium transition-all bg-indigo-500/15 text-indigo-300 hover:bg-indigo-500/25"
               >
                 {selectedLibrary ? (
                   <>
@@ -469,13 +487,13 @@ export default function Library() {
                       TYPE_ICON[selectedLibrary.type as keyof typeof TYPE_ICON] || BookOpen,
                       { className: 'w-3.5 h-3.5 flex-shrink-0' },
                     )}
-                    {selectedLibrary.name}
+                    <span className="max-w-[80px] truncate">{selectedLibrary.name}</span>
                   </>
                 ) : (
                   <span className="text-ink-faint">{t('library_choose')}</span>
                 )}
                 <ChevronDown
-                  className={`w-3.5 h-3.5 transition-transform ${libPickerOpen ? 'rotate-180' : ''}`}
+                  className={`w-3 h-3 flex-shrink-0 transition-transform ${libPickerOpen ? 'rotate-180' : ''}`}
                 />
               </button>
 
@@ -515,9 +533,30 @@ export default function Library() {
               )}
             </div>
           )}
+          {/* Search input — inline on mobile */}
+          {selectedLibrary && (
+            <div className="flex-1 relative min-w-0">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-ink-faint pointer-events-none" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder={t('library_search_placeholder')}
+                className="input pl-8 text-sm h-8 py-0 w-full"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-ink-faint hover:text-ink"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+          )}
           {/* Mobile controls */}
           {selectedLibrary && (
-            <div ref={displayMenuRefMobile} className="relative ml-auto flex-shrink-0">
+            <div ref={displayMenuRefMobile} className="relative flex-shrink-0">
               <button
                 onClick={() => setDisplayMenuOpen((v) => !v)}
                 className={`flex items-center justify-center w-8 h-8 rounded-lg border transition-colors ${displayMenuOpen ? 'bg-indigo-500/15 text-indigo-300 border-indigo-500/30' : 'text-ink-dim hover:text-ink hover:bg-surface-elevated border-surface-border'}`}
@@ -552,6 +591,16 @@ export default function Library() {
                     </button>
                   </div>
                   <div>
+                    <p className="text-[10px] uppercase tracking-wide text-ink-faint mb-1.5">{t('library_filter')}</p>
+                    <button
+                      onClick={toggleOwnedOnly}
+                      className={`w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${ownedOnly ? 'bg-indigo-500/15 text-indigo-300 border-indigo-500/30' : 'text-ink-dim hover:text-ink hover:bg-surface-elevated border-surface-border'}`}
+                    >
+                      <BookCheck className="w-3.5 h-3.5" />
+                      {t('library_owned_only')}
+                    </button>
+                  </div>
+                  <div>
                     <p className="text-[10px] uppercase tracking-wide text-ink-faint mb-1.5">{t('library_view')}</p>
                     <div className="flex rounded-lg overflow-hidden border border-surface-border">
                       <button
@@ -575,30 +624,6 @@ export default function Library() {
             </div>
           )}
         </div>
-
-        {/* Mobile search row */}
-        {selectedLibrary && (
-          <div className="md:hidden px-3 pb-2">
-            <div className="relative">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-ink-faint pointer-events-none" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder={t('library_search_placeholder')}
-                className="input pl-8 text-sm h-8 py-0 w-full"
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-ink-faint hover:text-ink"
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              )}
-            </div>
-          </div>
-        )}
 
         {/* Desktop row: library | search (centered) | controls */}
         {selectedLibrary && (
@@ -714,6 +739,16 @@ export default function Library() {
                     >
                       <Layers className="w-3.5 h-3.5" />
                       {t('library_merge_series_title')}
+                    </button>
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase tracking-wide text-ink-faint mb-1.5">{t('library_filter')}</p>
+                    <button
+                      onClick={toggleOwnedOnly}
+                      className={`w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${ownedOnly ? 'bg-indigo-500/15 text-indigo-300 border-indigo-500/30' : 'text-ink-dim hover:text-ink hover:bg-surface-elevated border-surface-border'}`}
+                    >
+                      <BookCheck className="w-3.5 h-3.5" />
+                      {t('library_owned_only')}
                     </button>
                   </div>
                   <div>

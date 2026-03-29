@@ -1,6 +1,6 @@
 'use client';
-import React from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import React, { useState, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import ProwlarrSettings from '@/components/SettingsTabs/ProwlarrSettings';
 import ClientSettings from '@/components/SettingsTabs/ClientSettings';
 import LibrarySettings from '@/components/SettingsTabs/LibrarySettings';
@@ -9,14 +9,20 @@ import GeneralSettings from '@/components/SettingsTabs/GeneralSettings';
 import { Radio, HardDrive, Library, Settings, Timer } from 'lucide-react';
 import { useT } from '@/i18n';
 
-export default function SettingsPage() {
+function SettingsContent() {
   const t = useT();
-  const router = useRouter();
   const searchParams = useSearchParams();
-  const activeTab = searchParams.get('tab') || 'general';
+  const [activeTab, setActiveTab] = useState(() => searchParams.get('tab') || 'general');
 
-  function setActiveTab(id: string) {
-    router.replace(`?tab=${id}`, { scroll: false });
+  // Sync state when URL changes (browser back/forward)
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab) setActiveTab(tab);
+  }, [searchParams]);
+
+  function handleTabClick(id: string) {
+    setActiveTab(id);
+    window.history.replaceState(null, '', `?tab=${id}`);
   }
 
   const TABS = [
@@ -60,7 +66,7 @@ export default function SettingsPage() {
               return (
                 <button
                   key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
+                  onClick={() => handleTabClick(tab.id)}
                   className={`flex flex-col items-center gap-1 px-1 py-2 rounded-lg text-center transition-all ${
                     activeTab === tab.id
                       ? 'bg-indigo-500/15 text-indigo-300'
@@ -87,7 +93,7 @@ export default function SettingsPage() {
               return (
                 <button
                   key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
+                  onClick={() => handleTabClick(tab.id)}
                   className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm w-full text-left transition-all ${
                     activeTab === tab.id
                       ? 'bg-indigo-500/15 text-indigo-300'
@@ -113,5 +119,13 @@ export default function SettingsPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function SettingsPage() {
+  return (
+    <Suspense>
+      <SettingsContent />
+    </Suspense>
   );
 }

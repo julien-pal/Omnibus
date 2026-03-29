@@ -170,40 +170,42 @@ export default function ProwlarrSettings() {
           <label className="block text-xs text-ink-muted uppercase tracking-wide mb-1.5">
             {t('prowlarr_apikey_label')}
           </label>
-          <div className="relative">
-            <input
-              type={showApiKey ? 'text' : 'password'}
-              value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
-              placeholder="••••••••••••••••"
-              className="input pr-10"
-            />
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <input
+                type={showApiKey ? 'text' : 'password'}
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+                placeholder="••••••••••••••••"
+                className="input pr-10 w-full"
+              />
+              <button
+                type="button"
+                onClick={() => setShowApiKey((v) => !v)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-faint hover:text-ink-dim"
+              >
+                {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
             <button
-              type="button"
-              onClick={() => setShowApiKey((v) => !v)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-faint hover:text-ink-dim"
+              onClick={handleTest}
+              disabled={testing}
+              className="btn-secondary flex items-center gap-2 flex-shrink-0"
             >
-              {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              {testing ? (
+                <>
+                  <RefreshCw className="w-4 h-4 animate-spin" /> {t('prowlarr_testing')}
+                </>
+              ) : (
+                t('prowlarr_test')
+              )}
             </button>
           </div>
         </div>
 
-        <div className="flex gap-2 pt-1">
+        <div className="flex justify-end pt-1">
           <button onClick={handleSave} disabled={saving} className="btn-primary">
             {saving ? t('prowlarr_saving') : t('prowlarr_save')}
-          </button>
-          <button
-            onClick={handleTest}
-            disabled={testing}
-            className="btn-secondary flex items-center gap-2"
-          >
-            {testing ? (
-              <>
-                <RefreshCw className="w-4 h-4 animate-spin" /> {t('prowlarr_testing')}
-              </>
-            ) : (
-              t('prowlarr_test')
-            )}
           </button>
         </div>
 

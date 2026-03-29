@@ -8,5 +8,5 @@ export function formatBytes(bytes: number | undefined): string {
 export function coverUrl(p: string | null | undefined): string | null {
   if (!p) return null;
   if (p.startsWith('http://') || p.startsWith('https://')) return p;
-  return `/api/library/cover?path=${encodeURIComponent(p)}`;
+  return `${process.env.NEXT_PUBLIC_BASE_PATH ?? ''}/api/library/cover?path=${encodeURIComponent(p)}`;
 }

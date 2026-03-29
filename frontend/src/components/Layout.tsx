@@ -110,6 +110,14 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
       {/* Main content + player — relative container for absolute PlayerBar */}
       <div className="flex-1 flex flex-col overflow-hidden relative">
+        {/* Top bar — mobile only */}
+        <div className="md:hidden flex items-center gap-2.5 px-4 h-12 border-b border-surface-border bg-surface-sidebar flex-shrink-0">
+          <div className="w-6 h-6 flex-shrink-0">
+            <Image src={`${process.env.NEXT_PUBLIC_BASE_PATH ?? ''}/logo.png`} alt="Omnibus" width={32} height={32} priority />
+          </div>
+          <span className="text-sm font-bold text-ink tracking-tight">Omnibus</span>
+        </div>
+
         <main className="flex-1 overflow-auto">
           <div className={`min-h-full p-4 md:p-6 pb-20 md:pb-6`}>{children}</div>
         </main>

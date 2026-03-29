@@ -54,13 +54,7 @@ function formatBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
 }
 
-// GET /api/stats
-router.get('/', (_req, res) => {
-  // Return cached response if still fresh
-  if (statsCache && Date.now() < statsCache.expiresAt) {
-    return res.json(statsCache.data);
-  }
-
+export function computeAndCacheStats(): void {
   const librariesConfig = getConfig('libraries');
 
   const allBooks: { book: ScannerBook; type: 'ebook' | 'audiobook' | 'mixed' }[] = [];
@@ -205,7 +199,14 @@ router.get('/', (_req, res) => {
   };
 
   statsCache = { data: payload, expiresAt: Date.now() + STATS_CACHE_TTL_MS };
-  res.json(payload);
+}
+
+// GET /api/stats
+router.get('/', (_req, res) => {
+  if (!statsCache || Date.now() >= statsCache.expiresAt) {
+    computeAndCacheStats();
+  }
+  res.json(statsCache!.data);
 });
 
 export default router;

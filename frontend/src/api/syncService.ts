@@ -34,9 +34,13 @@ export const syncService = {
   },
 
   getTranscriptProgress(bookPath: string) {
-    return apiClient.get<{ current: number; total: number }>(
-      `/sync/transcript-progress?bookPath=${encodeURIComponent(bookPath)}`,
-    );
+    return apiClient.get<{
+      total: number;
+      done: number[];
+      inProgress: number[];
+      fileProgress: Record<number, number>;
+      fileErrors?: Record<number, string>;
+    }>(`/sync/transcript-progress?bookPath=${encodeURIComponent(bookPath)}`);
   },
 
   transcriptToEbook(data: { bookPath: string; audioSeconds: number; fileIndex?: number }) {
