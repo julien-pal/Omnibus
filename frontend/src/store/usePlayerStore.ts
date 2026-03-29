@@ -318,9 +318,9 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       const transcriptProgress = progressRes.data
         ? {
             total: progressRes.data.total,
-            done: [],
-            inProgress: [progressRes.data.current],
-            fileProgress: {},
+            done: progressRes.data.done ?? [],
+            inProgress: progressRes.data.inProgress ?? [],
+            fileProgress: progressRes.data.fileProgress ?? {},
           }
         : null;
       set({ transcriptStatus: status, transcriptProgress, _transcriptPollHandle: null });

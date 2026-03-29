@@ -252,15 +252,15 @@ function ClientForm({
         </div>
       )}
 
-      <div className="flex gap-2 pt-1">
-        <button onClick={handleSave} disabled={saving} className="btn-primary text-sm">
-          {saving ? t('clients_saving') : isNew ? t('clients_save_new') : t('clients_save')}
-        </button>
+      <div className="flex gap-2 justify-end pt-1">
         {!isNew && (
           <button onClick={handleTest} disabled={testing} className="btn-secondary text-sm">
             {testing ? t('clients_testing') : t('clients_test')}
           </button>
         )}
+        <button onClick={handleSave} disabled={saving} className="btn-primary text-sm">
+          {saving ? t('clients_saving') : isNew ? t('clients_save_new') : t('clients_save')}
+        </button>
         <button onClick={onCancel} className="btn-secondary text-sm ml-auto">
           {t('clients_cancel')}
         </button>

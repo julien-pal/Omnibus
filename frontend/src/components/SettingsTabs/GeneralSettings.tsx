@@ -47,7 +47,7 @@ export default function GeneralSettings() {
   const [whisperUrl, setWhisperUrl] = useState('');
   const [whisperKey, setWhisperKey] = useState('');
   const [whisperModel, setWhisperModel] = useState('');
-  const [whisperConcurrency, setWhisperConcurrency] = useState(1);
+  const [whisperConcurrency, setWhisperConcurrency] = useState<number | ''>(1);
   const [whisperSaving, setWhisperSaving] = useState(false);
   const [whisperTesting, setWhisperTesting] = useState(false);
   const [whisperModels, setWhisperModels] = useState<string[]>([]);
@@ -100,7 +100,7 @@ export default function GeneralSettings() {
         setWhisperUrl(url);
         setWhisperKey(key);
         setWhisperModel(res.data.model || '');
-        setWhisperConcurrency(res.data.concurrency ?? 1);
+        setWhisperConcurrency(res.data.concurrency ?? 1 as number);
         if (url) fetchWhisperModels(url, key);
       })
       .catch(() => {});
@@ -210,7 +210,7 @@ export default function GeneralSettings() {
         baseUrl: whisperUrl,
         apiKey: whisperKey,
         model: whisperModel,
-        concurrency: whisperConcurrency,
+        concurrency: whisperConcurrency === '' ? 1 : whisperConcurrency,
       });
       toast.success(t('whisper_saved'));
     } catch (err) {
@@ -396,9 +396,11 @@ export default function GeneralSettings() {
               )}
             </div>
 
-            <button onClick={handleAuthSave} disabled={authSaving} className="btn-primary">
-              {authSaving ? t('auth_saving') : t('auth_save')}
-            </button>
+            <div className="flex justify-end">
+              <button onClick={handleAuthSave} disabled={authSaving} className="btn-primary">
+                {authSaving ? t('auth_saving') : t('auth_save')}
+              </button>
+            </div>
             {authMismatch && <p className="text-sm text-red-400">{t('auth_mismatch')}</p>}
             {!passwordSet && !password && (
               <div className="text-amber-400 text-sm bg-amber-500/10 border border-amber-500/20 rounded-xl px-4 py-3">
@@ -459,9 +461,11 @@ export default function GeneralSettings() {
             </p>
           </div>
         </div>
-        <button onClick={handleRenameSave} disabled={renameSaving} className="btn-primary">
-          {renameSaving ? t('rename_saving') : t('rename_save')}
-        </button>
+        <div className="flex justify-end">
+          <button onClick={handleRenameSave} disabled={renameSaving} className="btn-primary">
+            {renameSaving ? t('rename_saving') : t('rename_save')}
+          </button>
+        </div>
       </section>
 
       <div className="border-t border-surface-border" />
@@ -545,13 +549,22 @@ export default function GeneralSettings() {
               <label className="block text-xs text-ink-muted uppercase tracking-wide mb-1.5">
                 {t('whisper_url')}
               </label>
-              <input
-                type="text"
-                value={whisperUrl}
-                onChange={(e) => setWhisperUrl(e.target.value)}
-                placeholder="http://localhost:8000"
-                className="input"
-              />
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={whisperUrl}
+                  onChange={(e) => setWhisperUrl(e.target.value)}
+                  placeholder="http://localhost:8000"
+                  className="input flex-1"
+                />
+                <button
+                  onClick={handleWhisperTest}
+                  disabled={whisperTesting || !whisperUrl}
+                  className="btn-secondary flex items-center gap-2 flex-shrink-0"
+                >
+                  {whisperTesting ? t('whisper_testing') : t('whisper_test')}
+                </button>
+              </div>
             </div>
             <div>
               <label className="block text-xs text-ink-muted uppercase tracking-wide mb-1.5">
@@ -636,26 +649,24 @@ export default function GeneralSettings() {
                 {t('whisper_concurrency')}
               </label>
               <input
-                type="number"
-                min={1}
-                max={8}
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
                 value={whisperConcurrency}
-                onChange={(e) => setWhisperConcurrency(Math.max(1, parseInt(e.target.value) || 1))}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  if (v === '') { setWhisperConcurrency(''); return; }
+                  const n = parseInt(v, 10);
+                  if (!isNaN(n) && n >= 1 && n <= 16) setWhisperConcurrency(n);
+                }}
                 className="input w-24"
               />
               <p className="text-xs text-ink-faint mt-1">{t('whisper_concurrency_desc')}</p>
             </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex justify-end">
             <button onClick={handleWhisperSave} disabled={whisperSaving} className="btn-primary">
               {whisperSaving ? t('whisper_saving') : t('whisper_save')}
-            </button>
-            <button
-              onClick={handleWhisperTest}
-              disabled={whisperTesting || !whisperUrl}
-              className="btn-secondary flex items-center gap-2"
-            >
-              {whisperTesting ? t('whisper_testing') : t('whisper_test')}
             </button>
           </div>
         </section>
@@ -719,12 +730,12 @@ export default function GeneralSettings() {
             </label>
             <input type="email" value={readerEmail} onChange={(e) => setReaderEmail(e.target.value)} className="input" placeholder="yourname@kindle.com" />
           </div>
-          <div className="flex gap-2">
-            <button onClick={handleEmailSave} disabled={emailSaving} className="btn-primary">
-              {emailSaving ? '…' : t('email_save')}
-            </button>
+          <div className="flex gap-2 justify-end">
             <button onClick={handleEmailTest} disabled={emailTesting} className="btn-secondary">
               {emailTesting ? '…' : t('email_test')}
+            </button>
+            <button onClick={handleEmailSave} disabled={emailSaving} className="btn-primary">
+              {emailSaving ? '…' : t('email_save')}
             </button>
           </div>
         </div>

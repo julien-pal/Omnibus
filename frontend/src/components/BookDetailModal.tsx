@@ -491,9 +491,10 @@ export default function BookDetailModal({
           progressRes.data
             ? {
                 total: progressRes.data.total,
-                done: [],
-                inProgress: [progressRes.data.current],
-                fileProgress: {},
+                done: progressRes.data.done ?? [],
+                inProgress: progressRes.data.inProgress ?? [],
+                fileProgress: progressRes.data.fileProgress ?? {},
+                fileErrors: progressRes.data.fileErrors,
               }
             : null,
         );
@@ -1065,7 +1066,7 @@ export default function BookDetailModal({
           )}
 
           {/* Actions */}
-          <div className="p-4 pt-3 flex gap-2 flex-shrink-0 border-t border-surface-border">
+          <div className="p-4 pt-3 flex items-center justify-between flex-shrink-0 border-t border-surface-border">
             {editing ? (
               <>
                 <button onClick={() => setEditing(false)} className="btn-secondary flex-1">
@@ -1104,126 +1105,114 @@ export default function BookDetailModal({
               </>
             ) : (
               <>
-                {/* Left: utility icon buttons */}
-                <div className="flex items-center gap-3 flex-shrink-0">
-                  {onDeleted && (
-                    <Tooltip text={t('book_delete')}>
-                      <button
-                        onClick={() => setShowDeleteConfirm(true)}
-                        className="w-10 h-10 flex items-center justify-center rounded-xl border border-red-500/30 text-red-400 bg-red-500/10 hover:bg-red-500/20 transition-colors"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </Tooltip>
-                  )}
-                  {both && transcriptStatus !== null && syncEnabled && (
-                    <Tooltip
-                      text={t(
+                {onDeleted && (
+                  <Tooltip text={t('book_delete')}>
+                    <button
+                      onClick={() => setShowDeleteConfirm(true)}
+                      title={t('book_delete')}
+                      className="h-10 px-3 flex items-center justify-center rounded-xl border border-red-500/30 text-red-400 bg-red-500/10 hover:bg-red-500/20 transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </Tooltip>
+                )}
+                {both && transcriptStatus !== null && syncEnabled && (
+                  <Tooltip
+                    text={t(
+                      transcriptStatus === 'ready'
+                        ? 'whisper_build_transcript_rebuild'
+                        : transcriptStatus === 'building'
+                          ? 'whisper_transcript_building'
+                          : 'whisper_build_transcript',
+                    )}
+                  >
+                    <button
+                      onClick={handleBuildTranscript}
+                      disabled={transcriptBuilding || transcriptStatus === 'building'}
+                      title={t(transcriptStatus === 'ready' ? 'whisper_build_transcript_rebuild' : transcriptStatus === 'building' ? 'whisper_transcript_building' : 'whisper_build_transcript')}
+                      className={`h-10 px-3 flex items-center justify-center rounded-xl border transition-colors ${
                         transcriptStatus === 'ready'
-                          ? 'whisper_build_transcript_rebuild'
+                          ? 'border-green-500/30 text-green-400 hover:bg-green-500/15'
                           : transcriptStatus === 'building'
-                            ? 'whisper_transcript_building'
-                            : 'whisper_build_transcript',
-                      )}
+                            ? 'border-amber-500/30 text-amber-400 cursor-default'
+                            : 'border-surface-border text-ink-muted hover:bg-surface-elevated'
+                      }`}
                     >
-                      <button
-                        onClick={handleBuildTranscript}
-                        disabled={transcriptBuilding || transcriptStatus === 'building'}
-                        className={`w-10 h-10 flex items-center justify-center rounded-xl border transition-colors ${
-                          transcriptStatus === 'ready'
-                            ? 'border-green-500/30 text-green-400 hover:bg-green-500/15'
-                            : transcriptStatus === 'building'
-                              ? 'border-amber-500/30 text-amber-400 cursor-default'
-                              : 'border-surface-border text-ink-muted hover:bg-surface-elevated'
-                        }`}
-                      >
-                        <AudioLines
-                          className={`w-4 h-4 ${transcriptStatus === 'building' ? 'animate-pulse' : ''}`}
-                        />
-                      </button>
-                    </Tooltip>
-                  )}
-                  {((book.audiobookFiles?.length ?? 0) > 0 ||
-                    (book.ebookFiles?.length ?? 0) > 0) && (
-                    <Tooltip text={t('book_mark_complete')}>
-                      <button
-                        onClick={handleMarkComplete}
-                        className="w-10 h-10 flex items-center justify-center rounded-xl border border-surface-border text-ink-muted hover:bg-green-500/15 hover:border-green-500/30 hover:text-green-400 transition-colors"
-                      >
-                        <CheckCircle className="w-4 h-4" />
-                      </button>
-                    </Tooltip>
-                  )}
-                  {hasEbook && (
-                    <Tooltip text={t('send_to_reader')}>
-                      <button
-                        onClick={handleSendToReader}
-                        disabled={sendingToReader}
-                        className="w-10 h-10 flex items-center justify-center rounded-xl border border-surface-border text-ink-muted hover:bg-indigo-500/15 hover:border-indigo-500/30 hover:text-indigo-300 transition-colors disabled:opacity-50"
-                      >
-                        {sendingToReader
-                          ? <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" /></svg>
-                          : <Send className="w-4 h-4" />
-                        }
-                      </button>
-                    </Tooltip>
-                  )}
-                </div>
-
-                {/* Right: primary actions — icon-only on mobile, text on sm+ */}
-                <div className="flex items-center gap-2 flex-1 min-w-0 justify-end">
-                  {(book.wishlist ||
-                    book.savedMeta?.wishlist ||
-                    (book as MergedBook)._ebookWish ||
-                    (book as MergedBook)._audioWish) && (
-                    <Tooltip text={t('book_download')}>
-                      <button
-                        onClick={() => setShowTorrentSearch(true)}
-                        className="w-10 h-10 sm:w-auto sm:px-4 flex items-center justify-center gap-1.5 rounded-xl border border-amber-500/25 text-amber-400 hover:bg-amber-500/15 transition-colors text-sm font-medium"
-                      >
-                        <Zap className="w-4 h-4" />
-                        <span className="hidden sm:inline">{t('book_download')}</span>
-                      </button>
-                    </Tooltip>
-                  )}
-                  <Tooltip text={t('book_edit')}>
-                    <button
-                      onClick={startEditing}
-                      className="w-10 h-10 sm:w-auto sm:px-4 flex items-center justify-center gap-1.5 rounded-xl border border-surface-border text-ink-muted hover:bg-surface-elevated transition-colors text-sm font-medium"
-                    >
-                      <Pencil className="w-4 h-4" />
-                      <span className="hidden sm:inline">{t('book_edit')}</span>
+                      <AudioLines
+                        className={`w-4 h-4 ${transcriptStatus === 'building' ? 'animate-pulse' : ''}`}
+                      />
                     </button>
                   </Tooltip>
-                  <Tooltip text={t('book_enrich')}>
+                )}
+                {((book.audiobookFiles?.length ?? 0) > 0 ||
+                  (book.ebookFiles?.length ?? 0) > 0) && (
+                  <Tooltip text={t('book_mark_complete')}>
                     <button
-                      onClick={() => setShowPicker(true)}
-                      disabled={metaLoading}
-                      className="w-10 h-10 sm:w-auto sm:px-4 flex items-center justify-center gap-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white transition-colors text-sm font-medium disabled:opacity-50"
+                      onClick={handleMarkComplete}
+                      title={t('book_mark_complete')}
+                      className="h-10 px-3 flex items-center justify-center rounded-xl border border-surface-border text-ink-muted hover:bg-green-500/15 hover:border-green-500/30 hover:text-green-400 transition-colors"
                     >
-                      {metaLoading ? (
-                        <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
-                          <circle
-                            className="opacity-25"
-                            cx="12"
-                            cy="12"
-                            r="10"
-                            stroke="currentColor"
-                            strokeWidth="4"
-                          />
-                          <path
-                            className="opacity-75"
-                            fill="currentColor"
-                            d="M4 12a8 8 0 018-8v8H4z"
-                          />
-                        </svg>
-                      ) : (
-                        <Sparkles className="w-4 h-4" />
-                      )}
-                      <span className="hidden sm:inline">{t('book_enrich')}</span>
+                      <CheckCircle className="w-4 h-4" />
                     </button>
                   </Tooltip>
-                </div>
+                )}
+                {hasEbook && (
+                  <Tooltip text={t('send_to_reader')}>
+                    <button
+                      onClick={handleSendToReader}
+                      disabled={sendingToReader}
+                      className="h-10 px-3 flex items-center justify-center rounded-xl border border-surface-border text-ink-muted hover:bg-indigo-500/15 hover:border-indigo-500/30 hover:text-indigo-300 transition-colors disabled:opacity-50"
+                    >
+                      {sendingToReader
+                        ? <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" /></svg>
+                        : <Send className="w-4 h-4" />
+                      }
+                    </button>
+                  </Tooltip>
+                )}
+                {(book.wishlist ||
+                  book.savedMeta?.wishlist ||
+                  (book as MergedBook)._ebookWish ||
+                  (book as MergedBook)._audioWish) && (
+                  <Tooltip text={t('book_download')}>
+                    <button
+                      onClick={() => setShowTorrentSearch(true)}
+                      title={t('book_download')}
+                      className="h-10 px-3 sm:px-4 flex items-center justify-center gap-1.5 rounded-xl border border-amber-500/25 text-amber-400 hover:bg-amber-500/15 transition-colors text-sm font-medium"
+                    >
+                      <Zap className="w-4 h-4" />
+                      <span className="hidden sm:inline">{t('book_download')}</span>
+                    </button>
+                  </Tooltip>
+                )}
+                <Tooltip text={t('book_edit')}>
+                  <button
+                    onClick={startEditing}
+                    title={t('book_edit')}
+                    className="h-10 px-3 sm:px-4 flex items-center justify-center gap-1.5 rounded-xl border border-surface-border text-ink-muted hover:bg-surface-elevated transition-colors text-sm font-medium"
+                  >
+                    <Pencil className="w-4 h-4" />
+                    <span className="hidden sm:inline">{t('book_edit')}</span>
+                  </button>
+                </Tooltip>
+                <Tooltip text={t('book_enrich')}>
+                  <button
+                    onClick={() => setShowPicker(true)}
+                    disabled={metaLoading}
+                    title={t('book_enrich')}
+                    className="h-10 px-3 sm:px-4 flex items-center justify-center gap-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white transition-colors text-sm font-medium disabled:opacity-50"
+                  >
+                    {metaLoading ? (
+                      <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                      </svg>
+                    ) : (
+                      <Sparkles className="w-4 h-4" />
+                    )}
+                    <span className="hidden sm:inline">{t('book_enrich')}</span>
+                  </button>
+                </Tooltip>
               </>
             )}
           </div>

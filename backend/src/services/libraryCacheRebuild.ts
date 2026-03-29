@@ -1,6 +1,7 @@
 import { getConfig } from '../config/manager';
 import { scanLibrary, scanLibraryMixed, getLibraryStats } from '../scanner/library';
 import { invalidateScanCache, setScanCacheEntry } from '../routes/library';
+import { computeAndCacheStats } from '../routes/stats';
 import logger from '../lib/logger';
 import { LogEntry, ScannerAuthorGroup } from '../types';
 
@@ -68,6 +69,14 @@ export function rebuildLibraryCache(dryRun = false): void {
       : `Rebuilt cache for ${totalLibs} librar${totalLibs === 1 ? 'y' : 'ies'}`;
     logger.info(`[libraryCacheRebuild] ${msg}`);
     pushLog('info', msg);
+  }
+
+  if (!dryRun && totalLibs > 0) {
+    try {
+      computeAndCacheStats();
+    } catch (err) {
+      logger.warn(`[libraryCacheRebuild] Stats precomputation failed: ${(err as Error).message}`);
+    }
   }
 }
 

@@ -463,9 +463,10 @@ router.post('/whisper-models', async (req, res) => {
  * Pings the configured Whisper server to verify connectivity.
  */
 router.get('/test-whisper', async (req, res) => {
+  const { baseUrl: qBaseUrl, apiKey: qApiKey } = req.query as { baseUrl?: string; apiKey?: string };
   const config = getConfig('app');
-  const baseUrlRaw = config.whisper?.baseUrl;
-  const apiKey = config.whisper?.apiKey;
+  const baseUrlRaw = qBaseUrl || config.whisper?.baseUrl;
+  const apiKey = qApiKey !== undefined ? qApiKey : config.whisper?.apiKey;
 
   if (!baseUrlRaw) {
     res.status(503).json({ ok: false, error: 'Whisper not configured' });
