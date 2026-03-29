@@ -6,10 +6,13 @@ interface SyncResult {
   fileSeconds?: number;
   percentage?: number;
   confidence: string;
+  cfi?: string;
+  spineHref?: string;
+  matchedText?: string;
 }
 
 export const syncService = {
-  ebookToAudio(data: { bookPath: string; ebookPct?: number; cfi?: string }) {
+  ebookToAudio(data: { bookPath: string; ebookPct?: number; cfi?: string; audioFiles?: Array<{ path: string }> }) {
     return apiClient.post<SyncResult>('/sync/ebook-to-audio', data);
   },
 
@@ -43,7 +46,7 @@ export const syncService = {
     }>(`/sync/transcript-progress?bookPath=${encodeURIComponent(bookPath)}`);
   },
 
-  transcriptToEbook(data: { bookPath: string; audioSeconds: number; fileIndex?: number }) {
+  transcriptToEbook(data: { bookPath: string; audioPct: number; epubPath: string; audioSeconds?: number; fileIndex?: number }) {
     return apiClient.post('/sync/transcript-to-ebook', data);
   },
 

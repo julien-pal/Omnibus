@@ -111,7 +111,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     const file = actualTrack.files[actualTrack.fileIndex];
     if (!file) return;
 
-    audioEl.src = `/api/player/stream?path=${encodeURIComponent(file.path)}`;
+    audioEl.src = `${process.env.NEXT_PUBLIC_BASE_PATH ?? ''}/api/player/stream?path=${encodeURIComponent(file.path)}`;
     audioEl.playbackRate = get().speed;
 
     if (fileFraction !== undefined) {
@@ -281,7 +281,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     if (!audioEl) return;
     const file = track.files[track.fileIndex];
     if (!file) return;
-    audioEl.src = `/api/player/stream?path=${encodeURIComponent(file.path)}`;
+    audioEl.src = `${process.env.NEXT_PUBLIC_BASE_PATH ?? ''}/api/player/stream?path=${encodeURIComponent(file.path)}`;
     audioEl.playbackRate = speed;
     const resumePosition = Math.max(0, position - 10);
     const onCanPlay = () => {

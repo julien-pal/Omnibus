@@ -334,7 +334,7 @@ export default function PlayerBar() {
   const currentChapter = chapters[currentChapterIndex] ?? null;
   const currentFile = track.files[track.fileIndex];
   const downloadUrl = currentFile
-    ? `/api/player/download?path=${encodeURIComponent(currentFile.path)}`
+    ? `${process.env.NEXT_PUBLIC_BASE_PATH ?? ''}/api/player/download?path=${encodeURIComponent(currentFile.path)}`
     : null;
 
   const hasPrevChapter = chapters.length > 0 ? currentChapterIndex > 0 : track.fileIndex > 0;
