@@ -134,6 +134,7 @@ Open **http://localhost:8087** in your browser.
 
 ### Docker Compose
 
+#### Minimal
 Create a `docker-compose.yml` file:
 
 ```yaml
@@ -160,30 +161,12 @@ Open **http://localhost:8087** in your browser.
 
 ---
 
-## Docker Compose
-
-### Minimal
+#### With Speaches — GPU transcription (recommended for sync)
 
 ```yaml
 services:
   omnibus:
-    build: .
-    ports:
-      - "8087:8080"
-    volumes:
-      - ./config:/app/config
-      - /path/to/your/books:/books
-    environment:
-      - CONFIG_DIR=/app/config
-    restart: unless-stopped
-```
-
-### With Speaches — GPU transcription (recommended for sync)
-
-```yaml
-services:
-  omnibus:
-    build: .
+    image: julienpal/omnibus:latest
     ports:
       - "8087:8080"
     volumes:
