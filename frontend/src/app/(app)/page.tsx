@@ -22,8 +22,9 @@ import {
   EyeOff,
   Send,
   BookCheck,
+  AudioLines,
 } from 'lucide-react';
-import { libraryService, playerService, readerService } from '@/api';
+import { libraryService, playerService, readerService, syncService } from '@/api';
 import { settingsService, FollowEntry } from '@/api/settingsService';
 import { toast } from '@/store/useToastStore';
 import BookCard from '@/components/BookCard';
@@ -68,6 +69,7 @@ export default function Library() {
     books: MergedBook[];
   } | null>(null);
   const [sendingSeriesAll, setSendingSeriesAll] = useState(false);
+  const [transcribingSeriesAll, setTranscribingSeriesAll] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [groupBy, setGroupBy] = useState<string>(() =>
     typeof window !== 'undefined'
@@ -198,6 +200,11 @@ export default function Library() {
   function handleSeriesChange(name: string | null) {
     setSelectedSeries(name);
     pushURLState({ series: name });
+  }
+
+  function handleSelectSeries(name: string) {
+    setGroupBy('series');
+    handleSeriesChange(name);
   }
 
   async function handleSendSeriesAllToReader(books: MergedBook[]) {
@@ -843,6 +850,7 @@ export default function Library() {
                         key={i}
                         book={{ ...book, _libType: selectedLibrary?.type }}
                         onClick={setOpenBook}
+                        onSelectSeries={handleSelectSeries}
                         progress={allProgress?.[book.path]?.percentage}
                         completed={allProgress?.[book.path]?.completed}
                       />
@@ -855,6 +863,7 @@ export default function Library() {
                         key={i}
                         book={{ ...book, _libType: selectedLibrary?.type }}
                         onClick={setOpenBook}
+                        onSelectSeries={handleSelectSeries}
                       />
                     ))}
                   </div>
@@ -892,6 +901,7 @@ export default function Library() {
                           key={i}
                           book={{ ...book, _libType: selectedLibrary?.type }}
                           onClick={setOpenBook}
+                          onSelectSeries={handleSelectSeries}
                           progress={allProgress?.[book.path]?.percentage}
                           completed={allProgress?.[book.path]?.completed}
                         />
@@ -904,6 +914,7 @@ export default function Library() {
                           key={i}
                           book={{ ...book, _libType: selectedLibrary?.type }}
                           onClick={setOpenBook}
+                          onSelectSeries={handleSelectSeries}
                         />
                       ))}
                     </div>
@@ -940,6 +951,39 @@ export default function Library() {
                           {sendingSeriesAll
                             ? <svg className="animate-spin w-3.5 h-3.5" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" /></svg>
                             : <Send className="w-3.5 h-3.5" />
+                          }
+                        </button>
+                      </Tooltip>
+                      <Tooltip text={t('whisper_build_transcript')}>
+                        <button
+                          onClick={async () => {
+                            setTranscribingSeriesAll(true);
+                            try {
+                              const booksWithAudio = entry.books.filter(
+                                (b) => (b.audiobookFiles?.length ?? 0) > 0,
+                              );
+                              await Promise.all(
+                                booksWithAudio.map((b) =>
+                                  syncService.buildTranscript({
+                                    bookPath: b.path,
+                                    audioFiles: (b.audiobookFiles || []).map((f) => ({ path: f.path })),
+                                    epubPath: b.ebookFiles?.[0]?.path,
+                                  }),
+                                ),
+                              );
+                              toast.success(t('whisper_transcript_building'));
+                            } catch {
+                              toast.error(t('whisper_error'));
+                            } finally {
+                              setTranscribingSeriesAll(false);
+                            }
+                          }}
+                          disabled={transcribingSeriesAll}
+                          className="w-8 h-8 flex items-center justify-center rounded-lg text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/25 transition-colors disabled:opacity-50"
+                        >
+                          {transcribingSeriesAll
+                            ? <svg className="animate-spin w-3.5 h-3.5" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" /></svg>
+                            : <AudioLines className="w-3.5 h-3.5" />
                           }
                         </button>
                       </Tooltip>
@@ -1076,6 +1120,7 @@ export default function Library() {
                                     key={i}
                                     book={{ ...book, _libType: selectedLibrary?.type }}
                                     onClick={setOpenBook}
+                                    onSelectSeries={handleSelectSeries}
                                     progress={allProgress?.[book.path]?.percentage}
                                     completed={allProgress?.[book.path]?.completed}
                                   />
@@ -1088,6 +1133,7 @@ export default function Library() {
                                     key={i}
                                     book={{ ...book, _libType: selectedLibrary?.type }}
                                     onClick={setOpenBook}
+                                    onSelectSeries={handleSelectSeries}
                                   />
                                 ))}
                               </div>
@@ -1104,6 +1150,7 @@ export default function Library() {
                             key={i}
                             book={{ ...book, _libType: selectedLibrary?.type }}
                             onClick={setOpenBook}
+                            onSelectSeries={handleSelectSeries}
                             progress={allProgress?.[book.path]?.percentage}
                             completed={allProgress?.[book.path]?.completed}
                           />
@@ -1116,6 +1163,7 @@ export default function Library() {
                             key={i}
                             book={{ ...book, _libType: selectedLibrary?.type }}
                             onClick={setOpenBook}
+                            onSelectSeries={handleSelectSeries}
                           />
                         ))}
                       </div>

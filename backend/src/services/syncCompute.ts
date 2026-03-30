@@ -29,7 +29,8 @@ export interface TranscriptWord {
 export interface AudioTranscript {
   bookPath: string;
   builtAt: number;
-  files: Record<string, TranscriptWord[]>; // filename -> words
+  files: Record<string, TranscriptWord[]>; // filename -> words (fully completed files)
+  chunks?: Record<string, Record<number, TranscriptWord[]>>; // partial progress: filename -> chunkIndex -> words
   totalDuration: number;
   complete: boolean; // true only when all audio files have been transcribed
   syncMap?: SyncMapEntry[]; // pre-computed audio↔ebook alignment
@@ -81,7 +82,17 @@ export function loadTranscript(bookPath: string): AudioTranscript | null {
 }
 
 function saveTranscript(t: AudioTranscript): void {
-  fs.writeFileSync(transcriptPath(t.bookPath), JSON.stringify(t));
+  const p = transcriptPath(t.bookPath);
+  const dirExists = fs.existsSync(t.bookPath);
+  logger.info(`[transcript] saveTranscript called: path=${p} dir_exists=${dirExists} complete=${t.complete} files=${Object.keys(t.files).length}`);
+  try {
+    fs.writeFileSync(p, JSON.stringify(t));
+    logger.info(`[transcript] saveTranscript OK: ${p}`);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    logger.error(`[transcript] saveTranscript FAILED: ${p} — ${msg}`);
+    throw err;
+  }
 }
 
 /** Flatten all files into a single word array sorted by globalStart. */
@@ -434,7 +445,9 @@ async function getAudioDuration(filePath: string): Promise<number> {
     ]);
     const data = JSON.parse(stdout) as { format?: { duration?: string } };
     return parseFloat(data.format?.duration || '0') || 0;
-  } catch {
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    logger.error(`[transcript] ffprobe failed for ${filePath}: ${msg}`);
     return 0;
   }
 }
@@ -814,7 +827,10 @@ export async function buildTranscript(
   config: WhisperConfig,
   epubPath?: string,
 ): Promise<void> {
-  if (buildInProgress.get(bookPath)) return;
+  if (buildInProgress.get(bookPath)) {
+    logger.info(`[transcript] build already in progress for ${bookPath}, skipping`);
+    return;
+  }
   buildInProgress.set(bookPath, true);
   buildErrors.delete(bookPath);
 
@@ -871,13 +887,17 @@ export async function buildTranscript(
     const totalDuration = durations.reduce((s, d) => s + d, 0);
     const transcriptFiles: Record<string, TranscriptWord[]> = {};
 
-    // Resume: load already-transcribed files from a previous partial run
+    // Resume: load already-transcribed files and partial chunk progress from a previous run
     const existing = loadTranscript(bookPath);
     if (existing?.files) Object.assign(transcriptFiles, existing.files);
     const resumedCount = Object.keys(transcriptFiles).length;
     if (resumedCount > 0) {
       logger.info(`[transcript] resuming: ${resumedCount} file(s) already done, skipping them`);
     }
+    // partialChunks holds chunk-level results saved progressively during this build and previous ones
+    const partialChunks: Record<string, Record<number, TranscriptWord[]>> = existing?.chunks
+      ? JSON.parse(JSON.stringify(existing.chunks))
+      : {};
 
     // Build flat chunk queue across all files for maximum parallelism.
     // Each worker picks the next available chunk regardless of which file it belongs to,
@@ -895,42 +915,51 @@ export async function buildTranscript(
 
     for (let i = 0; i < audioFiles.length; i++) {
       const filename = path.basename(audioFiles[i].path);
-      // Skip files already transcribed (resume)
+      // Skip files already fully transcribed (resume)
       if (transcriptFiles[filename]) {
         logger.info(`[transcript] file[${i}] skipped (already transcribed): ${filename}`);
         if (!progress.done.includes(i)) progress.done.push(i);
         continue;
       }
 
+      const savedFileChunks = partialChunks[filename] ?? {};
       const duration = durations[i];
       let offset = 0;
       let chunkIdx = 0;
       while (offset < (duration || 3600)) {
         const end = duration > 0 ? Math.min(offset + CHUNK_DURATION, duration) : offset + CHUNK_DURATION;
-        chunkQueue.push({ fileIndex: i, chunkIndex: chunkIdx, startSec: offset, endSec: end });
+        // Only queue chunks not already saved from a previous run
+        if (!(chunkIdx in savedFileChunks)) {
+          chunkQueue.push({ fileIndex: i, chunkIndex: chunkIdx, startSec: offset, endSec: end });
+        }
         offset = end;
         chunkIdx++;
         if (duration > 0 && offset >= duration) break;
         if (duration === 0) break;
       }
-      fileChunkCounts.set(i, chunkIdx);
+      fileChunkCounts.set(i, chunkIdx); // total chunks for this file (includes pre-saved)
     }
 
     logger.info(`[transcript] chunk queue: ${chunkQueue.length} chunks across ${fileChunkCounts.size} files`);
 
-    // Per-file chunk results, indexed by chunkIndex for ordered assembly
+    // Per-file chunk results, indexed by chunkIndex for ordered assembly.
+    // Pre-load chunks already saved from previous runs.
     const fileChunkResults = new Map<number, Map<number, TranscriptWord[]>>();
     for (const [i] of fileChunkCounts) {
-      fileChunkResults.set(i, new Map());
-      progress.fileProgress[i] = 0;
+      const filename = path.basename(audioFiles[i].path);
+      const saved = partialChunks[filename] ?? {};
+      const map = new Map<number, TranscriptWord[]>();
+      for (const [ci, words] of Object.entries(saved)) {
+        map.set(Number(ci), words);
+      }
+      fileChunkResults.set(i, map);
+      const savedSecs = Object.keys(saved).length * CHUNK_DURATION;
+      progress.fileProgress[i] = savedSecs;
     }
     updateProgress();
 
     const processChunk = async (item: ChunkItem): Promise<void> => {
       const { fileIndex, chunkIndex, startSec, endSec } = item;
-
-      // Skip if this file already failed on a previous chunk
-      if (failedFiles.has(fileIndex)) return;
 
       const file = audioFiles[fileIndex];
       const globalOffset = globalOffsets[fileIndex];
@@ -958,29 +987,48 @@ export async function buildTranscript(
         return;
       }
 
+      const filename = path.basename(file.path);
+      let chunkWords: TranscriptWord[] = [];
+      let chunkFailed = false;
+
       try {
         const result = await transcribeFile(tmpPath, config, true);
         logger.info(
           `[transcript] file[${fileIndex}] chunk[${chunkIndex}]: transcribed, words=${result.words.length}, text=${result.text.length}chars`,
         );
 
-        const words: TranscriptWord[] = result.words.map((w) => ({
+        chunkWords = result.words.map((w) => ({
           text: w.text,
           start: startSec + w.start,
           end: startSec + w.end,
           globalStart: globalOffset + startSec + w.start,
         }));
-
-        fileChunkResults.get(fileIndex)!.set(chunkIndex, words);
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         logger.error(`[transcript] file[${fileIndex}] chunk[${chunkIndex}] transcribe ERROR: ${msg}`);
         progress.fileErrors[fileIndex] = msg;
         failedFiles.add(fileIndex);
-        updateProgress();
-        return;
+        chunkFailed = true;
+        // chunkWords stays [] — failed chunk contributes no words but still registers so completion check can fire
       } finally {
         fs.unlink(tmpPath, () => {});
+      }
+
+      // Register result (empty on failure) so the completion check can always fire
+      fileChunkResults.get(fileIndex)!.set(chunkIndex, chunkWords);
+
+      // Save chunk to disk progressively (skip empty failed chunks to avoid polluting the resume data)
+      if (!chunkFailed) {
+        if (!partialChunks[filename]) partialChunks[filename] = {};
+        partialChunks[filename][chunkIndex] = chunkWords;
+        saveTranscript({
+          bookPath,
+          builtAt: Date.now(),
+          files: transcriptFiles,
+          chunks: partialChunks,
+          totalDuration,
+          complete: false,
+        });
       }
 
       // Update progress
@@ -997,13 +1045,18 @@ export async function buildTranscript(
           fileWords.push(...(completedChunks.get(c) || []));
         }
 
-        const filename = path.basename(file.path);
-        logger.info(`[transcript] file[${fileIndex}] done: ${fileWords.length} words — saving incrementally`);
+        if (fileWords.length === 0) {
+          logger.warn(`[transcript] file[${fileIndex}] produced 0 words — Whisper may have returned empty response for ${filename}`);
+        }
+        logger.info(`[transcript] file[${fileIndex}] done: ${fileWords.length} words — saving`);
         transcriptFiles[filename] = fileWords;
+        // File fully assembled: remove partial chunks to keep the JSON lean
+        delete partialChunks[filename];
         saveTranscript({
           bookPath,
           builtAt: Date.now(),
           files: transcriptFiles,
+          chunks: partialChunks,
           totalDuration,
           complete: false,
         });
@@ -1035,6 +1088,7 @@ export async function buildTranscript(
       bookPath,
       builtAt: Date.now(),
       files: transcriptFiles,
+      chunks: Object.keys(partialChunks).length > 0 ? partialChunks : undefined,
       totalDuration,
       complete: true,
     });

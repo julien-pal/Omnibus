@@ -9,9 +9,11 @@ import { FormatBadges } from '@/components/BookDetailModal';
 export default function BookListRow({
   book,
   onClick,
+  onSelectSeries,
 }: {
   book: MergedBook;
   onClick: (book: MergedBook) => void;
+  onSelectSeries?: (series: string) => void;
 }) {
   const cover = coverUrl(book.savedMeta?.cover || book.cover);
   return (
@@ -34,9 +36,18 @@ export default function BookListRow({
         <p className="text-xs text-ink-muted truncate">{book.author}</p>
       </div>
       {extractSeries(book) && (
-        <span className="text-[11px] text-indigo-400 hidden md:block flex-shrink-0 max-w-[200px] truncate">
-          {extractSeries(book)}
-        </span>
+        onSelectSeries ? (
+          <button
+            onClick={(e) => { e.stopPropagation(); onSelectSeries(extractSeries(book)!); }}
+            className="text-[11px] text-indigo-400 hidden md:flex flex-shrink-0 max-w-[200px] truncate hover:underline"
+          >
+            {extractSeries(book)}
+          </button>
+        ) : (
+          <span className="text-[11px] text-indigo-400 hidden md:block flex-shrink-0 max-w-[200px] truncate">
+            {extractSeries(book)}
+          </span>
+        )
       )}
       <FormatBadges book={book} mode="inline" />
     </button>

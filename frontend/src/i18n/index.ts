@@ -90,6 +90,7 @@ const translations = {
     whisper_build_transcript: 'Pré-calculer la transcription',
     whisper_build_transcript_rebuild: 'Recalculer la transcription',
     whisper_transcript_building: 'Transcription en cours…',
+    whisper_error: 'Erreur de transcription',
     whisper_transcript_ready: 'Transcription disponible',
     whisper_transcript_none: 'Aucune transcription',
 
@@ -644,6 +645,7 @@ const translations = {
     whisper_build_transcript: 'Pre-compute transcript',
     whisper_build_transcript_rebuild: 'Rebuild transcript',
     whisper_transcript_building: 'Transcribing…',
+    whisper_error: 'Transcription error',
     whisper_transcript_ready: 'Transcript ready',
     whisper_transcript_none: 'No transcript',
 

@@ -19,11 +19,13 @@ import logger from '@/lib/logger';
 export default function CoverCard({
   book,
   onClick,
+  onSelectSeries,
   progress,
   completed,
 }: {
   book: MergedBook;
   onClick: (book: MergedBook) => void;
+  onSelectSeries?: (series: string) => void;
   progress?: number;
   completed?: boolean;
 }) {
@@ -242,7 +244,16 @@ export default function CoverCard({
         <p className="text-[11px] text-ink-muted truncate mt-0.5 w-full">{book.author}</p>
       )}
       {extractSeries(book) && (
-        <p className="text-[10px] text-indigo-400 truncate mt-0.5 w-full">{extractSeries(book)}</p>
+        onSelectSeries ? (
+          <button
+            onClick={(e) => { e.stopPropagation(); onSelectSeries(extractSeries(book)!); }}
+            className="text-[10px] text-indigo-400 truncate mt-0.5 w-full text-left hover:underline"
+          >
+            {extractSeries(book)}
+          </button>
+        ) : (
+          <p className="text-[10px] text-indigo-400 truncate mt-0.5 w-full">{extractSeries(book)}</p>
+        )
       )}
 
       {syncDialog && (
