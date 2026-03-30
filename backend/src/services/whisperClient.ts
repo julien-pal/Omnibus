@@ -74,13 +74,19 @@ export async function ensureModelLoaded(
           timeout: 5000,
         });
         const loaded = (r.data?.data ?? []).some((m) => m.id === model);
-        if (loaded) return;
+        if (loaded) {
+          logger.info(`[whisper] model "${model}" ready`);
+          return;
+        }
       } catch {
         /* keep waiting */
       }
     }
-  } catch {
+    logger.warn(`[whisper] model "${model}" not confirmed ready after 60s — proceeding anyway`);
+  } catch (err) {
     // Non-fatal: some servers don't need explicit model loading
+    const msg = err instanceof Error ? err.message : String(err);
+    logger.warn(`[whisper] ensureModelLoaded failed (non-fatal): ${msg}`);
   }
 }
 
@@ -103,6 +109,7 @@ export async function transcribeFile(
     await ensureModelLoaded(baseUrl, model, config.apiKey);
   }
 
+  logger.info(`[whisper] POST ${baseUrl}/v1/audio/transcriptions model=${model} file=${path.basename(audioPath)}`);
   let response;
   try {
     response = await axios.post(`${baseUrl}/v1/audio/transcriptions`, form, {

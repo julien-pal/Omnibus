@@ -211,29 +211,6 @@ function ClientForm({
         </div>
       </div>
 
-      <div>
-        <label className="block text-xs text-ink-muted uppercase tracking-wide mb-1.5">
-          {t('clients_pathmap_label')}{' '}
-          <span className="normal-case text-ink-faint">({t('clients_pathmap_hint')})</span>
-        </label>
-        <div className="grid grid-cols-2 gap-3">
-          <input
-            type="text"
-            value={form.pathMap?.from || ''}
-            onChange={(e) => setNested('pathMap', 'from', e.target.value)}
-            placeholder="/downloads"
-            className="input text-sm font-mono"
-          />
-          <input
-            type="text"
-            value={form.pathMap?.to || ''}
-            onChange={(e) => setNested('pathMap', 'to', e.target.value)}
-            placeholder="/mnt/DiskStation/downloads"
-            className="input text-sm font-mono"
-          />
-        </div>
-        <p className="text-[11px] text-ink-faint mt-1">{t('clients_pathmap_desc')}</p>
-      </div>
 
       {testResult && (
         <div

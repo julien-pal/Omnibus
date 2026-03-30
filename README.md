@@ -209,7 +209,7 @@ For CPU-only transcription replace `latest-cuda` with `latest-cpu`.
 | `Systran/faster-whisper-small` | ★★★☆☆ | ★★★★☆ | ~2 GB | **Recommended** — best speed/accuracy trade-off |
 | `Systran/faster-whisper-medium` | ★★☆☆☆ | ★★★★☆ | ~5 GB | Better accuracy, slower |
 | `Systran/faster-whisper-large-v3` | ★☆☆☆☆ | ★★★★★ | ~10 GB | Best accuracy, requires a powerful GPU |
-| `openai/whisper-large-v3-turbo` | ★★★☆☆ | ★★★★★ | ~6 GB | OpenAI's optimised large model |
+| `deepdml/faster-whisper-large-v3-turbo-ct2` | ★★★☆☆ | ★★★★★ | ~6 GB | OpenAI's optimised large model |
 
 > **Tip:** With `WHISPER__NUM_WORKERS=4` on Speaches and `concurrency=4` in Settings → Whisper, throughput scales linearly. A 20-hour audiobook transcribes in ~1 hour with `faster-whisper-small` on a mid-range GPU.
 
