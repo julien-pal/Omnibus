@@ -268,7 +268,8 @@ describe('readBookMeta', () => {
       JSON.stringify({ series: 'Mistborn', seriesSequence: '1' }),
     );
     const result = readBookMeta(bookPath);
-    expect(result?.series).toBe('Mistborn #1');
+    expect(result?.series).toBe('Mistborn');
+    expect(result?.seriesSequence).toBe('1');
   });
 
   it('reads series from an array of objects', () => {
@@ -277,7 +278,8 @@ describe('readBookMeta', () => {
       JSON.stringify({ series: [{ name: 'Wheel of Time', sequence: '1' }] }),
     );
     const result = readBookMeta(bookPath);
-    expect(result?.series).toBe('Wheel of Time #1');
+    expect(result?.series).toBe('Wheel of Time');
+    expect(result?.seriesSequence).toBe('1');
   });
 
   it('reads first author from an authors array', () => {
