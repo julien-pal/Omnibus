@@ -733,6 +733,7 @@ export function writeBookMeta(
       : {}),
     ...((data as Record<string, unknown>).notFoundEbook ? { notFoundEbook: true } : {}),
     ...((data as Record<string, unknown>).notFoundAudiobook ? { notFoundAudiobook: true } : {}),
+    ...((data as Record<string, unknown>).readLater ? { readLater: true } : {}),
   };
 
   fs.writeFileSync(p, JSON.stringify(absData, null, 2), 'utf8');
