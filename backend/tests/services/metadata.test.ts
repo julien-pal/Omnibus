@@ -220,6 +220,12 @@ describe('writeBookMeta', () => {
     expect(written.wishlistFormat).toBe('audiobook');
   });
 
+  it('includes readLater flag when provided', () => {
+    writeBookMeta(bookPath, { readLater: true });
+    const written = JSON.parse((mockFs.writeFileSync as jest.Mock).mock.calls[0][1] as string);
+    expect(written.readLater).toBe(true);
+  });
+
   it('returns the input data with a savedAt timestamp', () => {
     const result = writeBookMeta(bookPath, { title: 'Test' });
     expect(result.savedAt).toBeDefined();
