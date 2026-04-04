@@ -6,6 +6,8 @@ import { getAllProgress as getAllReaderProgress } from '../services/readerProgre
 import { BookMetadata, ScannerBook } from '../types';
 
 const router = Router();
+const EBOOK_EXTS = new Set(['epub', 'pdf', 'mobi', 'azw3', 'cbz', 'cbr']);
+const AUDIOBOOK_EXTS = new Set(['mp3', 'm4b', 'm4a', 'flac', 'ogg', 'opus']);
 
 // ── Stats response cache ──────────────────────────────────────────────────────
 const STATS_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
@@ -88,6 +90,7 @@ export function computeAndCacheStats(): void {
   let totalSize = 0;
 
   const seriesSet = new Set<string>();
+  const mixedSeriesFormats = new Map<string, { hasEbook: boolean; hasAudiobook: boolean }>();
   const authorsSet = new Set<string>();
   const genreMap = new Map<string, number>();
   const languageMap = new Map<string, number>();
@@ -102,16 +105,32 @@ export function computeAndCacheStats(): void {
     }
 
     totalBooks++;
-    if (type === 'ebook') totalEbooks++;
-    else if (type === 'audiobook') totalAudiobooks++;
-    else totalMixed++;
+    const hasEbook =
+      type === 'ebook' ||
+      (type === 'mixed' &&
+        ((book.ebookFiles?.length ?? 0) > 0 || book.files.some((f) => EBOOK_EXTS.has(f.ext))));
+    const hasAudiobook =
+      type === 'audiobook' ||
+      (type === 'mixed' &&
+        ((book.audiobookFiles?.length ?? 0) > 0 ||
+          book.files.some((f) => AUDIOBOOK_EXTS.has(f.ext))));
+
+    if (hasEbook) totalEbooks++;
+    if (hasAudiobook) totalAudiobooks++;
 
     for (const f of book.files) totalSize += f.size;
 
     // Series
     if (meta?.series && typeof meta.series === 'string') {
       const name = meta.series.replace(/\s+#\d+(\.\d+)?$/, '').trim();
-      if (name) seriesSet.add(name);
+      if (name) {
+        seriesSet.add(name);
+        const previous = mixedSeriesFormats.get(name) ?? { hasEbook: false, hasAudiobook: false };
+        mixedSeriesFormats.set(name, {
+          hasEbook: previous.hasEbook || hasEbook,
+          hasAudiobook: previous.hasAudiobook || hasAudiobook,
+        });
+      }
     }
 
     // Authors
@@ -177,6 +196,8 @@ export function computeAndCacheStats(): void {
   const byYear = [...yearMap.entries()]
     .sort((a, b) => a[0].localeCompare(b[0]))
     .map(([year, count]) => ({ year, count }));
+
+  totalMixed = [...mixedSeriesFormats.values()].filter((s) => s.hasEbook && s.hasAudiobook).length;
 
   const payload = {
     totalBooks,

@@ -23,6 +23,7 @@ import {
   FolderOpen,
   Sparkles,
   Send,
+  Bookmark,
 } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from '@/store/useToastStore';
@@ -233,6 +234,9 @@ export default function BookDetailModal({
   const [ebookCollapsed, setEbookCollapsed] = useState(false);
   const [sendingToReader, setSendingToReader] = useState(false);
   const [showReaderEmailPrompt, setShowReaderEmailPrompt] = useState(false);
+  const [readLaterActive, setReadLaterActive] = useState<boolean>(
+    () => book.savedMeta?.readLater === true,
+  );
   const [readerEmailInput, setReaderEmailInput] = useState('');
 
   const { data: suggestions } = useQuery<{
@@ -310,6 +314,18 @@ export default function BookDetailModal({
     queryClient.invalidateQueries({ queryKey: ['player-progress-all'] });
     queryClient.invalidateQueries({ queryKey: ['reader-progress-all'] });
     setBookProgress({ percentage: 1, completed: true });
+  }
+
+  async function handleToggleReadLater() {
+    const newValue = !readLaterActive;
+    setReadLaterActive(newValue);
+    try {
+      await libraryService.updateBook({ path: book.path, readLater: newValue });
+      queryClient.invalidateQueries({ queryKey: ['library-read-later'] });
+    } catch (err) {
+      setReadLaterActive(!newValue);
+      toast.error((err as Error).message);
+    }
   }
 
   async function handleSendToReader() {
@@ -466,7 +482,10 @@ export default function BookDetailModal({
   }
 
   useEffect(() => {
-    if (book.savedMeta) setMeta(book.savedMeta);
+    if (book.savedMeta) {
+      setMeta(book.savedMeta);
+      setReadLaterActive(book.savedMeta.readLater === true);
+    }
   }, [book.savedMeta]);
 
   // Load transcript status when both formats are present
@@ -1185,6 +1204,19 @@ export default function BookDetailModal({
                     </button>
                   </Tooltip>
                 )}
+                <Tooltip text={readLaterActive ? t('book_read_later_remove') : t('book_read_later')}>
+                  <button
+                    onClick={handleToggleReadLater}
+                    title={readLaterActive ? t('book_read_later_remove') : t('book_read_later')}
+                    className={`h-10 px-3 flex items-center justify-center rounded-xl border transition-colors ${
+                      readLaterActive
+                        ? 'border-amber-500/40 text-amber-400 bg-amber-500/10 hover:bg-amber-500/20'
+                        : 'border-surface-border text-ink-muted hover:bg-amber-500/10 hover:border-amber-500/30 hover:text-amber-400'
+                    }`}
+                  >
+                    <Bookmark className={`w-4 h-4 ${readLaterActive ? 'fill-amber-400' : ''}`} />
+                  </button>
+                </Tooltip>
                 <Tooltip text={t('book_edit')}>
                   <button
                     onClick={startEditing}
