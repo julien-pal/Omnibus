@@ -220,6 +220,12 @@ describe('writeBookMeta', () => {
     expect(written.wishlistFormat).toBe('audiobook');
   });
 
+  it('includes readLater flag when provided', () => {
+    writeBookMeta(bookPath, { readLater: true });
+    const written = JSON.parse((mockFs.writeFileSync as jest.Mock).mock.calls[0][1] as string);
+    expect(written.readLater).toBe(true);
+  });
+
   it('returns the input data with a savedAt timestamp', () => {
     const result = writeBookMeta(bookPath, { title: 'Test' });
     expect(result.savedAt).toBeDefined();
@@ -268,7 +274,8 @@ describe('readBookMeta', () => {
       JSON.stringify({ series: 'Mistborn', seriesSequence: '1' }),
     );
     const result = readBookMeta(bookPath);
-    expect(result?.series).toBe('Mistborn #1');
+    expect(result?.series).toBe('Mistborn');
+    expect(result?.seriesSequence).toBe('1');
   });
 
   it('reads series from an array of objects', () => {
@@ -277,7 +284,8 @@ describe('readBookMeta', () => {
       JSON.stringify({ series: [{ name: 'Wheel of Time', sequence: '1' }] }),
     );
     const result = readBookMeta(bookPath);
-    expect(result?.series).toBe('Wheel of Time #1');
+    expect(result?.series).toBe('Wheel of Time');
+    expect(result?.seriesSequence).toBe('1');
   });
 
   it('reads first author from an authors array', () => {

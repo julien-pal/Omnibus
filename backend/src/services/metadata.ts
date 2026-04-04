@@ -668,6 +668,7 @@ export function readBookMeta(bookPath: string): BookMetadata | null {
       (Array.isArray(raw.narrators) ? (raw.narrators as string[]).join(', ') : '');
 
     let series = '';
+    let seriesSequence = '';
     const rs = raw.series;
     if (Array.isArray(rs)) {
       const entry = rs[0];
@@ -676,15 +677,14 @@ export function readBookMeta(bookPath: string): BookMetadata | null {
       } else if (entry && typeof entry === 'object') {
         const e = entry as { name?: string; sequence?: string };
         series = e.name || '';
-        const seq = (raw.seriesSequence as string | undefined) || e.sequence || '';
-        if (series && seq) series = `${series} #${seq}`;
+        seriesSequence = (raw.seriesSequence as string | undefined) || e.sequence || '';
       }
     } else if (typeof rs === 'string') {
       series = rs;
-      if (series && raw.seriesSequence) series = `${series} #${raw.seriesSequence}`;
+      seriesSequence = (raw.seriesSequence as string | undefined) || '';
     }
 
-    return { ...raw, year, author, narrator, series } as unknown as BookMetadata;
+    return { ...raw, year, author, narrator, series, seriesSequence } as unknown as BookMetadata;
   } catch {
     return null;
   }
@@ -733,6 +733,7 @@ export function writeBookMeta(
       : {}),
     ...((data as Record<string, unknown>).notFoundEbook ? { notFoundEbook: true } : {}),
     ...((data as Record<string, unknown>).notFoundAudiobook ? { notFoundAudiobook: true } : {}),
+    ...((data as Record<string, unknown>).readLater ? { readLater: true } : {}),
   };
 
   fs.writeFileSync(p, JSON.stringify(absData, null, 2), 'utf8');

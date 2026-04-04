@@ -215,6 +215,7 @@ export interface BookMetadata {
   wishlistFormat?: ContentType;
   wishlistDownloadTriggered?: boolean;
   wishlistTriggeredAt?: string;
+  readLater?: boolean;
   [key: string]: unknown;
 }
 
@@ -323,6 +324,7 @@ export interface ScannerFile {
 export interface ScannerBook {
   title: string;
   author?: string;
+  series?: string;
   path: string;
   files: ScannerFile[];
   cover: string | null;

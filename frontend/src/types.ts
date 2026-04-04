@@ -31,6 +31,7 @@ export interface BookMetadata {
   wishlistFormat?: ContentType;
   wishlistDownloadTriggered?: boolean;
   wishlistTriggeredAt?: string;
+  readLater?: boolean;
   [key: string]: unknown;
 }
 
