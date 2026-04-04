@@ -4,7 +4,7 @@ import path from 'path';
 import { getConfig } from '../config/manager';
 import { scanLibrary, scanLibraryMixed, getLibraryStats } from '../scanner/library';
 import { enrich, search, fetchByAsin, fetchSeriesBooks, writeBookMeta } from '../services/metadata';
-import { BookMetadata } from '../types';
+import { BookMetadata, ScannerBook } from '../types';
 import { invalidateStatsCache } from './stats';
 import { sendEbookToReader } from '../services/email';
 
@@ -203,6 +203,38 @@ router.get('/', (_req, res) => {
   res.json(result);
 });
 
+// GET /api/library/read-later — list all books marked as read-later across all libraries
+router.get('/read-later', (_req, res) => {
+  const librariesConfig = getConfig('libraries');
+  const results: ScannerBook[] = [];
+
+  for (const type of ['ebook', 'audiobook', 'mixed'] as const) {
+    for (const lib of librariesConfig[type] || []) {
+      try {
+        const tree =
+          type === 'mixed' ? scanLibraryMixed(lib.path) : scanLibrary(lib.path, type);
+        for (const group of tree) {
+          for (const book of group.books) {
+            if (book.savedMeta?.readLater === true) {
+              const sm = book.savedMeta;
+              results.push({
+                ...book,
+                title: sm.title || book.title,
+                author: sm.author || book.author || group.author,
+                ...(typeof sm.series === 'string' && sm.series ? { series: sm.series } : {}),
+              });
+            }
+          }
+        }
+      } catch {
+        /* skip unavailable library */
+      }
+    }
+  }
+
+  res.json(results);
+});
+
 // GET /api/library/:id/scan
 router.get('/:id/scan', (req, res) => {
   const librariesConfig = getConfig('libraries');
@@ -333,15 +365,7 @@ router.put('/metadata/book', express.json(), async (req, res) => {
       }
     })();
     const merged: Record<string, unknown> = {
-      ...(existing.wishlist ? { wishlist: true } : {}),
-      ...(existing.wishlistFormat ? { wishlistFormat: existing.wishlistFormat } : {}),
-      ...(existing.wishlistDownloadTriggered
-        ? { wishlistDownloadTriggered: true, wishlistTriggeredAt: existing.wishlistTriggeredAt }
-        : {}),
-      ...(existing.downloadingEbook ? { downloadingEbook: true } : {}),
-      ...(existing.downloadingAudiobook ? { downloadingAudiobook: true } : {}),
-      ...(existing.notFoundEbook ? { notFoundEbook: true } : {}),
-      ...(existing.notFoundAudiobook ? { notFoundAudiobook: true } : {}),
+      ...existing,
       ...fields,
     };
     const saved = writeBookMeta(bookPath, merged);

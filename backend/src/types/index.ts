@@ -324,6 +324,7 @@ export interface ScannerFile {
 export interface ScannerBook {
   title: string;
   author?: string;
+  series?: string;
   path: string;
   files: ScannerFile[];
   cover: string | null;

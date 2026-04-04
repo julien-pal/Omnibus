@@ -23,6 +23,7 @@ import {
   Send,
   BookCheck,
   AudioLines,
+  Bookmark,
 } from 'lucide-react';
 import { libraryService, playerService, readerService, syncService } from '@/api';
 import { settingsService, FollowEntry } from '@/api/settingsService';
@@ -357,6 +358,15 @@ export default function Library() {
     }
     return merged;
   }, [playerProgress, readerProgress]);
+
+  const { data: readLaterBooks } = useQuery({
+    queryKey: ['library-read-later'],
+    queryFn: async () => {
+      const res = await libraryService.getReadLater();
+      return res.data;
+    },
+    staleTime: 30_000,
+  });
 
   const { data: libraryData, isLoading: scanLoading } = useQuery({
     queryKey: ['library', selectedLibrary?.id],
@@ -802,6 +812,45 @@ export default function Library() {
           </div>
         )}
 
+        {/* Read Later section — cross-library */}
+        {readLaterBooks && readLaterBooks.length > 0 && (
+          <div className="px-6 pt-6 pb-2">
+            <h2 className="text-base font-semibold text-ink mb-3 flex items-center gap-2">
+              <Bookmark className="w-4 h-4 fill-amber-400 text-amber-400" />
+              {t('library_read_later_section')}
+              <span className="text-xs font-medium px-2 py-0.5 rounded-md text-amber-400 border border-amber-500/40 tabular-nums">
+                {readLaterBooks.length}
+              </span>
+            </h2>
+            {viewMode === 'grid' ? (
+              <div className="grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] md:grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-3 md:gap-5">
+                {readLaterBooks.map((book, i) => (
+                  <CoverCard
+                    key={i}
+                    book={book as MergedBook}
+                    onClick={setOpenBook}
+                    onSelectSeries={handleSelectSeries}
+                    progress={allProgress?.[book.path]?.percentage}
+                    completed={allProgress?.[book.path]?.completed}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="flex flex-col">
+                {readLaterBooks.map((book, i) => (
+                  <BookListRow
+                    key={i}
+                    book={book as MergedBook}
+                    onClick={setOpenBook}
+                    onSelectSeries={handleSelectSeries}
+                  />
+                ))}
+              </div>
+            )}
+            <div className="mt-6 border-b border-surface-border" />
+          </div>
+        )}
+
         {scanLoading && (
           <div className="px-6 py-6">
             <SkeletonGrid />
@@ -1227,6 +1276,7 @@ export default function Library() {
           onDeleted={() => {
             setOpenBook(null);
             queryClient.invalidateQueries({ queryKey: ['library', selectedLibrary?.id] });
+            queryClient.invalidateQueries({ queryKey: ['library-read-later'] });
           }}
         />
       )}

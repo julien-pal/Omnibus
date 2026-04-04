@@ -1,5 +1,5 @@
 import apiClient from './client';
-import type { BookMetadata, Library, LibraryScanResult } from '@/types';
+import type { BookMetadata, Library, LibraryScanResult, ScannerBook } from '@/types';
 
 interface LibrariesResponse {
   ebook: Library[];
@@ -52,5 +52,9 @@ export const libraryService = {
 
   sendToReader(bookPath: string) {
     return apiClient.post<{ ok: boolean; error?: string }>('/library/send-to-reader', { bookPath });
+  },
+
+  getReadLater() {
+    return apiClient.get<ScannerBook[]>('/library/read-later');
   },
 };
