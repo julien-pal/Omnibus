@@ -276,6 +276,24 @@ router.get('/transcript-status', (req, res) => {
 });
 
 /**
+ * GET /api/sync/transcript?bookPath=...
+ * Returns the full transcript file (segments + syncMap) for client-side offline sync.
+ */
+router.get('/transcript', (req, res) => {
+  const { bookPath } = req.query as { bookPath: string };
+  if (!bookPath) {
+    res.status(400).json({ error: 'bookPath is required' });
+    return;
+  }
+  const transcript = loadTranscript(bookPath);
+  if (!transcript) {
+    res.status(404).json({ error: 'no transcript available' });
+    return;
+  }
+  res.json(transcript);
+});
+
+/**
  * GET /api/sync/active-builds
  * Returns all bookPaths currently being transcribed.
  */
