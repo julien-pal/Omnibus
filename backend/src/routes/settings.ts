@@ -125,7 +125,7 @@ router.get('/prowlarr/indexers', async (_req, res) => {
     indexers.forEach((idx) => {
       logger.info(`[prowlarr] Indexer "${idx.name}" — ${idx.available.length} categories`);
     });
-    res.json(indexers);
+    res.json({ indexers });
   } catch (err) {
     res.status(502).json({ error: (err as Error).message });
   }
