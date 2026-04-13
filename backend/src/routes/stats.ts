@@ -15,10 +15,10 @@ interface StatsCacheEntry {
   data: unknown;
   expiresAt: number;
 }
-let statsCache: StatsCacheEntry | null = null;
+const statsCache = new Map<string, StatsCacheEntry>();
 
 export function invalidateStatsCache() {
-  statsCache = null;
+  statsCache.clear();
 }
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -56,13 +56,14 @@ function formatBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
 }
 
-export function computeAndCacheStats(): void {
+export function computeAndCacheStats(profileId = 'default', libraryId?: string): void {
   const librariesConfig = getConfig('libraries');
 
   const allBooks: { book: ScannerBook; type: 'ebook' | 'audiobook' | 'mixed' }[] = [];
 
   for (const type of ['ebook', 'audiobook', 'mixed'] as const) {
     for (const lib of librariesConfig[type] || []) {
+      if (libraryId && lib.id !== libraryId) continue;
       try {
         const tree = type === 'mixed' ? scanLibraryMixed(lib.path) : scanLibrary(lib.path, type);
         for (const group of tree) {
@@ -76,8 +77,8 @@ export function computeAndCacheStats(): void {
     }
   }
 
-  const playerProgress = getAllProgress();
-  const readerProgress = getAllReaderProgress();
+  const playerProgress = getAllProgress(profileId);
+  const readerProgress = getAllReaderProgress(profileId);
 
   let totalBooks = 0;
   let totalEbooks = 0;
@@ -219,15 +220,20 @@ export function computeAndCacheStats(): void {
     byYear,
   };
 
-  statsCache = { data: payload, expiresAt: Date.now() + STATS_CACHE_TTL_MS };
+  const cacheKey = libraryId ? `${profileId}:${libraryId}` : profileId;
+  statsCache.set(cacheKey, { data: payload, expiresAt: Date.now() + STATS_CACHE_TTL_MS });
 }
 
-// GET /api/stats
-router.get('/', (_req, res) => {
-  if (!statsCache || Date.now() >= statsCache.expiresAt) {
-    computeAndCacheStats();
+// GET /api/stats?libraryId=<id>
+router.get('/', (req, res) => {
+  const profileId = req.user?.profileId || 'default';
+  const libraryId = (req.query.libraryId as string) || undefined;
+  const cacheKey = libraryId ? `${profileId}:${libraryId}` : profileId;
+  const cached = statsCache.get(cacheKey);
+  if (!cached || Date.now() >= cached.expiresAt) {
+    computeAndCacheStats(profileId, libraryId);
   }
-  res.json(statsCache!.data);
+  res.json(statsCache.get(cacheKey)!.data);
 });
 
 export default router;

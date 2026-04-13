@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { BookOpen, Play, Info, BookOpenCheck, AudioLines } from 'lucide-react';
 import { MergedBook, ProgressEntry, PlayerTrack, ReaderProgressEntry } from '@/types';
 import { coverUrl } from '@/lib/utils';
-import { extractSeries } from '@/lib/libraryUtils';
+import { extractSeries, extractSeriesNumber } from '@/lib/libraryUtils';
 import { FormatBadges } from '@/components/BookDetailModal';
 import { usePlayerStore } from '@/store/usePlayerStore';
 import { useReaderStore } from '@/store/useReaderStore';
@@ -228,9 +228,16 @@ export default function CoverCard({
           </button>
         </Tooltip>
 
+        {/* Volume tag — top left */}
+        {extractSeriesNumber(book) && (
+          <span className="absolute top-1.5 right-1.5 z-10 text-[9px] font-bold leading-none px-1.5 py-1 rounded-md bg-black/60 text-white backdrop-blur-sm">
+            #{extractSeriesNumber(book)}
+          </span>
+        )}
+
         {/* Progress bar */}
         {(completed || (progress !== undefined && progress > 0)) && (
-          <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/30 rounded-b-xl overflow-hidden">
+          <div className="absolute left-0 right-0 h-1 bg-black/30 rounded-b-xl overflow-hidden bottom-0">
             <div
               className={`h-full rounded-b-xl ${completed ? 'bg-green-500' : 'bg-indigo-500'}`}
               style={{ width: completed ? '100%' : `${Math.min(progress! * 100, 100)}%` }}
@@ -240,20 +247,20 @@ export default function CoverCard({
       </div>
 
       <p className="text-xs font-medium text-ink truncate leading-snug w-full">{book.title}</p>
-      {book.author && (
-        <p className="text-[11px] text-ink-muted truncate mt-0.5 w-full">{book.author}</p>
-      )}
       {extractSeries(book) && (
         onSelectSeries ? (
           <button
             onClick={(e) => { e.stopPropagation(); onSelectSeries(extractSeries(book)!); }}
-            className="text-[10px] text-indigo-400 truncate mt-0.5 w-full text-left hover:underline"
+            className="text-[10px] text-indigo-400 truncate mt-0.5 w-full hover:underline"
           >
             {extractSeries(book)}
           </button>
         ) : (
           <p className="text-[10px] text-indigo-400 truncate mt-0.5 w-full">{extractSeries(book)}</p>
         )
+      )}
+      {book.author && (
+        <p className="text-[11px] text-ink-muted truncate mt-0.5 w-full">{book.author}</p>
       )}
 
       {syncDialog && (

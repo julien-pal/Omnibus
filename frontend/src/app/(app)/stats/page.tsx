@@ -1,4 +1,5 @@
 'use client';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   BookOpen,
@@ -13,9 +14,12 @@ import {
   TrendingUp,
   Globe,
   ListFilter,
+  ChevronDown,
 } from 'lucide-react';
 import { statsService, StatsGenreEntry, StatsYearEntry } from '@/api/statsService';
+import { libraryService } from '@/api';
 import { useT } from '@/i18n';
+import type { Library as LibType } from '@/types';
 
 function StatCard({
   icon: Icon,
@@ -108,11 +112,52 @@ function YearSparkline({ data }: { data: StatsYearEntry[] }) {
   );
 }
 
+const TYPE_ICON = {
+  audiobook: Headphones,
+  mixed: Layers,
+  ebook: BookOpen,
+};
+
+type LibWithType = LibType & { type: string };
+
 export default function StatsPage() {
   const t = useT();
+  const [selectedLibrary, setSelectedLibrary] = useState<LibWithType | null>(null);
+
+  const { data: librariesData } = useQuery({
+    queryKey: ['libraries'],
+    queryFn: () => libraryService.getAll().then((r) => r.data),
+  });
+
+  const allLibraries = useMemo(
+    (): LibWithType[] =>
+      librariesData
+        ? [
+            ...(librariesData.ebook || []).map((l) => ({ ...l, type: 'ebook' as const })),
+            ...(librariesData.audiobook || []).map((l) => ({ ...l, type: 'audiobook' as const })),
+            ...(librariesData.mixed || []).map((l) => ({ ...l, type: 'mixed' as const })),
+          ]
+        : [],
+    [librariesData],
+  );
+
+  useEffect(() => {
+    if (allLibraries.length > 0 && !selectedLibrary) {
+      const savedId = typeof window !== 'undefined' ? localStorage.getItem('library_selectedId') : null;
+      const saved = savedId ? allLibraries.find((l) => l.id === savedId) : null;
+      setSelectedLibrary(saved || allLibraries[0]);
+    }
+  }, [allLibraries.length]);
+
+  function selectLibrary(lib: LibWithType) {
+    setSelectedLibrary(lib);
+    if (typeof window !== 'undefined') localStorage.setItem('library_selectedId', lib.id);
+  }
+
   const { data, isLoading, error } = useQuery({
-    queryKey: ['stats'],
-    queryFn: () => statsService.getStats().then((r) => r.data),
+    queryKey: ['stats', selectedLibrary?.id],
+    queryFn: () => statsService.getStats(selectedLibrary?.id).then((r) => r.data),
+    enabled: !!selectedLibrary,
   });
 
   if (isLoading) {
@@ -143,9 +188,30 @@ export default function StatsPage() {
   return (
     <div className="max-w-5xl mx-auto space-y-8">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-ink">{t('stats_title')}</h1>
-        <p className="text-sm text-ink-dim mt-0.5">{t('stats_subtitle')}</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-ink">{t('stats_title')}</h1>
+          <p className="text-sm text-ink-dim mt-0.5">{t('stats_subtitle')}</p>
+        </div>
+        {allLibraries.length > 1 && (
+          <div className="relative">
+            <select
+              value={selectedLibrary?.id || ''}
+              onChange={(e) => {
+                const lib = allLibraries.find((l) => l.id === e.target.value);
+                if (lib) selectLibrary(lib);
+              }}
+              className="appearance-none bg-surface-elevated border border-surface-border rounded-lg px-3 py-1.5 pr-8 text-sm text-ink cursor-pointer hover:border-indigo-500/40 transition-colors"
+            >
+              {allLibraries.map((lib) => (
+                <option key={lib.id} value={lib.id}>
+                  {lib.name}
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-ink-dim pointer-events-none" />
+          </div>
+        )}
       </div>
 
       {/* Overview grid */}

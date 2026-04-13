@@ -6,10 +6,23 @@ function authMiddleware(req: Request, res: Response, next: NextFunction): void {
   const appConfig = getConfig('app');
 
   if (!appConfig.auth || !appConfig.auth.enabled) {
-    // Always populate req.user so downstream routes can rely on profileId
-    if (!req.user) {
-      req.user = { username: 'anonymous', role: 'admin', profileId: 'default' };
+    // Auth disabled — still honour a JWT if present so profiles can separate progress
+    const authHeader = req.headers['authorization'];
+    if (authHeader && authHeader.startsWith('Bearer ') && appConfig.jwtSecret) {
+      try {
+        const decoded = jwt.verify(authHeader.slice(7), appConfig.jwtSecret) as {
+          username: string;
+          role: string;
+          profileId: string;
+        };
+        req.user = decoded;
+        next();
+        return;
+      } catch {
+        // Token invalid/expired — fall through to anonymous
+      }
     }
+    req.user = { username: 'anonymous', role: 'admin', profileId: 'default' };
     next();
     return;
   }

@@ -48,7 +48,13 @@ router.get('/cover', (req, res) => {
   const filePath = req.query.path as string;
   if (!filePath) return res.status(400).json({ error: 'path is required' });
   if (!isPathWithinLibraries(filePath)) return res.status(403).json({ error: 'access denied' });
-  if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'File not found' });
+  let stat: fs.Stats;
+  try {
+    stat = fs.statSync(filePath);
+  } catch {
+    return res.status(404).json({ error: 'File not found' });
+  }
+  if (!stat.isFile()) return res.status(400).json({ error: 'Not a file' });
 
   const ext = path.extname(filePath).toLowerCase();
   const mime =
@@ -62,7 +68,9 @@ router.get('/cover', (req, res) => {
     )[ext] || 'image/jpeg';
   res.setHeader('Content-Type', mime);
   res.setHeader('Cache-Control', 'public, max-age=86400');
-  fs.createReadStream(filePath).pipe(res);
+  fs.createReadStream(filePath).on('error', () => {
+    if (!res.headersSent) res.status(500).json({ error: 'Read error' });
+  }).pipe(res);
 });
 
 // GET /api/library/metadata/search?title=...&author=...&type=audiobook|ebook&provider=audible|openlibrary|googlebooks

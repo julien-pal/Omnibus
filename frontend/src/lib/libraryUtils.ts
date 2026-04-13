@@ -10,6 +10,19 @@ export function extractSeries(book: ScannerBook): string | null {
   return null;
 }
 
+export function extractSeriesNumber(book: ScannerBook): string | null {
+  if (book.savedMeta?.seriesSequence) return book.savedMeta.seriesSequence;
+  const series = book.series || '';
+  const m1 = series.match(/#(\d+(?:\.\d+)?)$/);
+  if (m1) return m1[1];
+  const title = book.title || '';
+  const m2 = title.match(/[,\s]+#?(\d+(?:\.\d+)?)\s*\)$/);
+  if (m2) return m2[1];
+  const m3 = title.match(/\s+#(\d+(?:\.\d+)?)\s*[–—-]/);
+  if (m3) return m3[1];
+  return null;
+}
+
 const EBOOK_EXTS = new Set(['epub', 'pdf', 'mobi', 'azw3', 'cbz', 'cbr']);
 const AUDIO_EXTS = new Set(['mp3', 'm4b', 'm4a', 'flac', 'ogg', 'opus']);
 

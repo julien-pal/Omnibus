@@ -119,4 +119,13 @@ app.listen(PORT, () => {
   }
 });
 
+// Prevent uncaught exceptions (e.g. EISDIR from fs operations) from crashing the server
+process.on('uncaughtException', (err) => {
+  logger.error(`[uncaughtException] ${err.message}`);
+  if (err.stack) logger.error(err.stack);
+});
+process.on('unhandledRejection', (reason) => {
+  logger.error(`[unhandledRejection] ${reason}`);
+});
+
 export default app;

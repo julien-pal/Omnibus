@@ -3,7 +3,7 @@ import React from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Download, Search, Settings, LogOut, Library, BarChart2, UserCircle } from 'lucide-react';
+import { Download, Search, Settings, LogOut, Library, BarChart2, UserCircle, Home } from 'lucide-react';
 import useStore from '../store/useStore';
 import { authService } from '../api/authService';
 import { useT } from '@/i18n';
@@ -24,7 +24,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const isAdmin = user?.role === 'admin';
 
   const navItems = [
-    { to: '/', icon: Library, label: t('nav_library') },
+    { to: '/', icon: Home, label: t('nav_home') },
+    { to: '/library', icon: Library, label: t('nav_library') },
     { to: '/search', icon: Search, label: t('nav_search') },
     { to: '/downloads', icon: Download, label: t('nav_downloads') },
     { to: '/stats', icon: BarChart2, label: t('nav_stats') },

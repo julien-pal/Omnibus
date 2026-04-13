@@ -36,7 +36,9 @@ export interface LibraryStats {
 }
 
 export const statsService = {
-  getStats() {
-    return apiClient.get<LibraryStats>('/stats');
+  getStats(libraryId?: string) {
+    return apiClient.get<LibraryStats>('/stats', {
+      params: libraryId ? { libraryId } : undefined,
+    });
   },
 };

@@ -4,6 +4,7 @@ export type Locale = 'fr' | 'en';
 const translations = {
   fr: {
     // Nav
+    nav_home: 'Accueil',
     nav_library: 'Bibliothèque',
     nav_search: 'Recherche',
     nav_downloads: 'Téléchargements',
@@ -11,6 +12,15 @@ const translations = {
     nav_settings: 'Paramètres',
     nav_logout: 'Déconnexion',
     nav_switch_profile: 'Changer de profil',
+
+    // Home
+    home_title: 'Accueil',
+    home_subtitle: 'Votre activité en un coup d\'oeil',
+    home_continue: 'Reprendre',
+    home_read_later: 'A lire plus tard',
+    home_recent: 'Ajouts récents',
+    home_completed: 'Terminés récemment',
+    home_empty: 'Votre bibliothèque est vide.',
 
     // Settings tabs
     settings_title: 'Paramètres',
@@ -23,7 +33,7 @@ const translations = {
     tab_users: 'Utilisateurs',
 
     // Profiles
-    profiles_title: 'Qui regarde ?',
+    profiles_title: 'Qui lit ?',
     profiles_select: 'Choisir un profil',
     profiles_manage: 'Gérer les profils',
     profiles_enter_password: 'Mot de passe',
@@ -596,6 +606,7 @@ const translations = {
   },
   en: {
     // Nav
+    nav_home: 'Home',
     nav_library: 'Library',
     nav_search: 'Search',
     nav_downloads: 'Downloads',
@@ -603,6 +614,15 @@ const translations = {
     nav_settings: 'Settings',
     nav_logout: 'Logout',
     nav_switch_profile: 'Switch profile',
+
+    // Home
+    home_title: 'Home',
+    home_subtitle: 'Your activity at a glance',
+    home_continue: 'Continue',
+    home_read_later: 'Read later',
+    home_recent: 'Recent additions',
+    home_completed: 'Recently completed',
+    home_empty: 'Your library is empty.',
 
     // Settings tabs
     settings_title: 'Settings',
@@ -615,7 +635,7 @@ const translations = {
     tab_users: 'Users',
 
     // Profiles
-    profiles_title: "Who's watching?",
+    profiles_title: "Who's reading?",
     profiles_select: 'Select a profile',
     profiles_manage: 'Manage profiles',
     profiles_enter_password: 'Password',
