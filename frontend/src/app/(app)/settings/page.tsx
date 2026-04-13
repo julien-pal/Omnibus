@@ -1,18 +1,31 @@
 'use client';
 import React, { useState, useEffect, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import ProwlarrSettings from '@/components/SettingsTabs/ProwlarrSettings';
 import ClientSettings from '@/components/SettingsTabs/ClientSettings';
 import LibrarySettings from '@/components/SettingsTabs/LibrarySettings';
 import CronSettings from '@/components/SettingsTabs/CronSettings';
 import GeneralSettings from '@/components/SettingsTabs/GeneralSettings';
-import { Radio, HardDrive, Library, Settings, Timer } from 'lucide-react';
+import UsersSettings from '@/components/SettingsTabs/UsersSettings';
+import { Radio, HardDrive, Library, Settings, Timer, Users } from 'lucide-react';
 import { useT } from '@/i18n';
+import useStore from '@/store/useStore';
 
 function SettingsContent() {
   const t = useT();
+  const { user } = useStore();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState(() => searchParams.get('tab') || 'general');
+
+  // Redirect non-admin users
+  useEffect(() => {
+    if (user && user.role !== 'admin') {
+      router.replace('/');
+    }
+  }, [user, router]);
+
+  if (user && user.role !== 'admin') return null;
 
   // Sync state when URL changes (browser back/forward)
   useEffect(() => {
@@ -25,12 +38,14 @@ function SettingsContent() {
     window.history.replaceState(null, '', `?tab=${id}`);
   }
 
+  const isAdmin = !user?.role || user.role === 'admin';
   const TABS = [
     { id: 'general', label: t('tab_general'), icon: Settings },
     { id: 'prowlarr', label: t('tab_prowlarr'), icon: Radio },
     { id: 'clients', label: t('tab_clients'), icon: HardDrive },
     { id: 'libraries', label: t('tab_libraries'), icon: Library },
     { id: 'cron', label: t('tab_cron'), icon: Timer },
+    ...(isAdmin ? [{ id: 'users', label: t('tab_users'), icon: Users }] : []),
   ];
 
   const TabContent = () => {
@@ -45,6 +60,8 @@ function SettingsContent() {
         return <LibrarySettings />;
       case 'cron':
         return <CronSettings />;
+      case 'users':
+        return <UsersSettings />;
       default:
         return null;
     }

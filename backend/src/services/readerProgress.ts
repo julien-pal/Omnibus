@@ -12,7 +12,9 @@ export interface ReaderProgressEntry {
   updatedAt: number;
 }
 
-const FILENAME = 'reader-progress.json';
+function progressFilename(profileId: string): string {
+  return profileId === 'default' ? 'reader-progress.json' : `reader-progress-${profileId}.json`;
+}
 
 // Legacy centralized store (fallback for migration)
 const CONFIG_DIR = process.env.CONFIG_DIR || path.join(process.cwd(), 'config');
@@ -26,30 +28,32 @@ function readLegacyStore(): Record<string, ReaderProgressEntry> {
   }
 }
 
-export function getProgress(bookPath: string): ReaderProgressEntry | null {
-  const file = path.join(bookPath, FILENAME);
+export function getProgress(bookPath: string, profileId = 'default'): ReaderProgressEntry | null {
+  const file = path.join(bookPath, progressFilename(profileId));
   try {
     return JSON.parse(fs.readFileSync(file, 'utf-8'));
   } catch {
-    // Fallback to legacy centralized store
-    return readLegacyStore()[bookPath] ?? null;
+    // Fallback to legacy centralized store (only for default profile)
+    if (profileId === 'default') return readLegacyStore()[bookPath] ?? null;
+    return null;
   }
 }
 
-export function saveProgress(bookPath: string, entry: ReaderProgressEntry): void {
-  fs.writeFileSync(path.join(bookPath, FILENAME), JSON.stringify(entry, null, 2));
-  if (allProgressCache) allProgressCache[bookPath] = entry;
+export function saveProgress(bookPath: string, entry: ReaderProgressEntry, profileId = 'default'): void {
+  fs.writeFileSync(path.join(bookPath, progressFilename(profileId)), JSON.stringify(entry, null, 2));
+  const cache = allProgressCaches.get(profileId);
+  if (cache) cache.data[bookPath] = entry;
 }
 
-function findProgressFiles(dir: string, maxDepth: number, depth = 0): string[] {
+function findProgressFiles(dir: string, filename: string, maxDepth: number, depth = 0): string[] {
   if (depth > maxDepth) return [];
   const results: string[] = [];
   try {
     for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-      if (entry.isFile() && entry.name === FILENAME) {
+      if (entry.isFile() && entry.name === filename) {
         results.push(path.join(dir, entry.name));
       } else if (entry.isDirectory() && !entry.name.startsWith('.')) {
-        results.push(...findProgressFiles(path.join(dir, entry.name), maxDepth, depth + 1));
+        results.push(...findProgressFiles(path.join(dir, entry.name), filename, maxDepth, depth + 1));
       }
     }
   } catch {}
@@ -57,15 +61,20 @@ function findProgressFiles(dir: string, maxDepth: number, depth = 0): string[] {
 }
 
 const ALL_PROGRESS_TTL_MS = 5 * 60 * 1000;
-let allProgressCache: Record<string, ReaderProgressEntry> | null = null;
-let allProgressCacheAt = 0;
+interface CacheEntry {
+  data: Record<string, ReaderProgressEntry>;
+  at: number;
+}
+const allProgressCaches = new Map<string, CacheEntry>();
 
-export function getAllProgress(): Record<string, ReaderProgressEntry> {
-  if (allProgressCache && Date.now() - allProgressCacheAt < ALL_PROGRESS_TTL_MS) {
-    return allProgressCache;
+export function getAllProgress(profileId = 'default'): Record<string, ReaderProgressEntry> {
+  const cached = allProgressCaches.get(profileId);
+  if (cached && Date.now() - cached.at < ALL_PROGRESS_TTL_MS) {
+    return cached.data;
   }
 
   const result: Record<string, ReaderProgressEntry> = {};
+  const filename = progressFilename(profileId);
 
   const librariesConfig = getConfig('libraries') as unknown as Record<
     string,
@@ -77,7 +86,7 @@ export function getAllProgress(): Record<string, ReaderProgressEntry> {
   }
 
   for (const root of roots) {
-    for (const file of findProgressFiles(root, 4)) {
+    for (const file of findProgressFiles(root, filename, 4)) {
       const bookPath = path.dirname(file);
       try {
         result[bookPath] = JSON.parse(fs.readFileSync(file, 'utf-8'));
@@ -85,7 +94,6 @@ export function getAllProgress(): Record<string, ReaderProgressEntry> {
     }
   }
 
-  allProgressCache = result;
-  allProgressCacheAt = Date.now();
+  allProgressCaches.set(profileId, { data: result, at: Date.now() });
   return result;
 }

@@ -22,6 +22,7 @@ import playerRouter from './routes/player';
 import readerRouter from './routes/reader';
 import syncRouter from './routes/sync';
 import statsRouter from './routes/stats';
+import profilesRouter from './routes/profiles';
 import logger from './lib/logger';
 // Initialize config files before anything else
 initializeConfigs();
@@ -55,6 +56,7 @@ app.use('/api/player', playerRouter);
 app.use('/api/reader', readerRouter);
 app.use('/api/sync', syncRouter);
 app.use('/api/stats', statsRouter);
+app.use('/api/profiles', profilesRouter);
 
 // Serve frontend static build in production
 const FRONTEND_DIST = path.resolve(__dirname, '../../frontend/dist');

@@ -6,6 +6,10 @@ function authMiddleware(req: Request, res: Response, next: NextFunction): void {
   const appConfig = getConfig('app');
 
   if (!appConfig.auth || !appConfig.auth.enabled) {
+    // Always populate req.user so downstream routes can rely on profileId
+    if (!req.user) {
+      req.user = { username: 'anonymous', role: 'admin', profileId: 'default' };
+    }
     next();
     return;
   }
@@ -26,6 +30,7 @@ function authMiddleware(req: Request, res: Response, next: NextFunction): void {
     const decoded = jwt.verify(token, secret) as {
       username: string;
       role: string;
+      profileId: string;
       iat?: number;
       exp?: number;
     };

@@ -100,7 +100,7 @@ router.post('/ebook-to-audio', async (req, res) => {
     return;
   }
 
-  const readerProg = getReaderProgress(bookPath);
+  const readerProg = getReaderProgress(bookPath, req.user?.profileId);
   const effectiveCfi = cfi ?? readerProg?.cfi;
   logger.info(
     `[sync:e→t] trigger — ebook ${(ebookPct * 100).toFixed(1)}% | cfi: ${effectiveCfi ?? 'n/a'} | chapter: "${readerProg?.chapterTitle ?? 'n/a'}"`,
@@ -146,7 +146,7 @@ router.post('/transcript-to-ebook', (req, res) => {
     return;
   }
 
-  const playerProg = getPlayerProgress(bookPath);
+  const playerProg = getPlayerProgress(bookPath, req.user?.profileId);
   logger.info(
     `[sync:t→e] trigger — audio ${(audioPct * 100).toFixed(1)}% | file: ${playerProg?.fileIndex ?? 'n/a'} @${playerProg?.position?.toFixed(1) ?? 'n/a'}s | chapter: "${playerProg?.chapterTitle ?? 'n/a'}"`,
   );
@@ -344,7 +344,7 @@ router.get('/debug-positions', (req, res) => {
   }
 
   // Audio position from player progress
-  const playerProg = getPlayerProgress(bookPath);
+  const playerProg = getPlayerProgress(bookPath, req.user?.profileId);
   const audioPct =
     audioPctParam != null ? parseFloat(audioPctParam) : (playerProg?.percentage ?? null);
   const audioFileIndex = playerProg?.fileIndex ?? null;

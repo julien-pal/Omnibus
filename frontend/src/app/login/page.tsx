@@ -9,7 +9,7 @@ import { useT } from '@/i18n';
 
 export default function Login() {
   const t = useT();
-  const [username, setUsername] = useState('admin');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -29,7 +29,7 @@ export default function Login() {
       const res = await authService.login(username, password);
       setToken(res.data.token);
       setUser(res.data.user);
-      router.replace('/');
+      router.replace('/profiles');
     } catch (err) {
       const axErr = err as { response?: { data?: { error?: string } } };
       setError(axErr.response?.data?.error || t('login_invalid'));

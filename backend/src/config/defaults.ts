@@ -7,7 +7,8 @@ const defaults: ConfigMap = {
     auth: {
       enabled: false,
       username: '',
-      passwordHash: ''
+      passwordHash: '',
+      profiles: []
     },
     renamePatterns: {
       ebook: '{author}/{series}/{title}',

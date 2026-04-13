@@ -3,7 +3,7 @@ import React from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Download, Search, Settings, LogOut, Library, BarChart2 } from 'lucide-react';
+import { Download, Search, Settings, LogOut, Library, BarChart2, UserCircle } from 'lucide-react';
 import useStore from '../store/useStore';
 import { authService } from '../api/authService';
 import { useT } from '@/i18n';
@@ -14,19 +14,21 @@ import ReaderModal from '@/components/ReaderModal';
 import { useReaderStore } from '@/store/useReaderStore';
 
 export default function Layout({ children }: { children: React.ReactNode }) {
-  const { logout, authEnabled, user } = useStore();
+  const { logout, authEnabled, user, profileName, setProfile } = useStore();
   const router = useRouter();
   const pathname = usePathname();
   const t = useT();
   const track = usePlayerStore((s) => s.track);
   const readerBook = useReaderStore((s) => s.book);
 
+  const isAdmin = user?.role === 'admin';
+
   const navItems = [
     { to: '/', icon: Library, label: t('nav_library') },
     { to: '/search', icon: Search, label: t('nav_search') },
     { to: '/downloads', icon: Download, label: t('nav_downloads') },
     { to: '/stats', icon: BarChart2, label: t('nav_stats') },
-    { to: '/settings', icon: Settings, label: t('nav_settings') },
+    ...(isAdmin ? [{ to: '/settings', icon: Settings, label: t('nav_settings') }] : []),
   ];
 
   async function handleLogout() {
@@ -37,6 +39,11 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     }
     logout();
     router.push('/login');
+  }
+
+  function handleSwitchProfile() {
+    setProfile(null, null);
+    router.push('/profiles');
   }
 
   function isActive(to: string) {
@@ -84,17 +91,23 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           })}
         </nav>
 
-        {/* Bottom — user + logout */}
-        {authEnabled && (
-          <div className="p-2 border-t border-surface-border">
-            <div className="flex items-center gap-2.5 px-3 py-2 rounded-lg mb-0.5">
+        {/* Bottom — profile + logout */}
+        <div className="p-2 border-t border-surface-border">
+          {profileName && (
+            <button
+              onClick={handleSwitchProfile}
+              className="group flex items-center gap-2.5 px-3 py-2 rounded-lg mb-0.5 w-full hover:bg-surface-elevated transition-colors"
+            >
               <div className="w-6 h-6 rounded-full bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center flex-shrink-0">
                 <span className="text-[10px] font-bold text-indigo-400 leading-none">
-                  {(user?.username || 'U')[0].toUpperCase()}
+                  {profileName[0].toUpperCase()}
                 </span>
               </div>
-              <span className="text-xs text-ink-muted truncate">{user?.username}</span>
-            </div>
+              <span className="text-xs text-ink-muted truncate group-hover:hidden">{profileName}</span>
+              <span className="text-xs text-ink hidden group-hover:inline truncate">{t('nav_switch_profile')}</span>
+            </button>
+          )}
+          {authEnabled && (
             <button
               onClick={handleLogout}
               className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-ink-dim hover:text-red-400 hover:bg-red-500/10 w-full transition-colors"
@@ -104,8 +117,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               </span>
               {t('nav_logout')}
             </button>
-          </div>
-        )}
+          )}
+        </div>
       </aside>
 
       {/* Main content + player — relative container for absolute PlayerBar */}
@@ -144,15 +157,13 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             </Link>
           );
         })}
-        {authEnabled && (
-          <button
-            onClick={handleLogout}
-            className="flex flex-col items-center justify-center gap-1 flex-1 h-full text-ink-dim hover:text-red-400 transition-colors"
-          >
-            <LogOut className="w-5 h-5" />
-            <span className="text-[10px] font-medium">{t('nav_logout')}</span>
-          </button>
-        )}
+        <button
+          onClick={handleSwitchProfile}
+          className="flex flex-col items-center justify-center gap-1 flex-1 h-full text-ink-dim hover:text-ink transition-colors"
+        >
+          <UserCircle className="w-5 h-5" />
+          <span className="text-[10px] font-medium truncate max-w-[60px]">{profileName || t('nav_switch_profile')}</span>
+        </button>
       </nav>
     </div>
   );
