@@ -102,6 +102,13 @@ describe('mergeBooksByTitle', () => {
     expect(result[0]._audioPresent).toBe(true);
   });
 
+  it('keeps same title with different series as separate entries', () => {
+    const b1 = book({ title: 'The Will of the Many', series: 'Hiérarchie #1', files: [file('mp3', 'a.mp3')] });
+    const b2 = book({ title: 'The Will of the Many', series: 'Hierarchy #1', files: [file('mp3', 'b.mp3')] });
+    const result = mergeBooksByTitle([b1, b2]);
+    expect(result).toHaveLength(2);
+  });
+
   it('merges wishlist flags with real book', () => {
     const wishlist = book({
       title: 'Dune',

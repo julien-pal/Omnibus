@@ -98,6 +98,7 @@ function DownloadDetailModal({
   const [importing, setImporting] = useState(false);
   const [importMsg, setImportMsg] = useState('');
   const isDone = status === 'done' || status === 'seeding';
+  const canImport = isDone || status === 'error' || status === 'imported';
   const cover = metadata?.cover;
   const TypeIcon = type === 'audiobook' ? Headphones : type === 'mixed' ? Layers : BookOpen;
 
@@ -275,7 +276,7 @@ function DownloadDetailModal({
             <button onClick={onClose} className="btn-secondary flex-1">
               {t('download_close')}
             </button>
-            {isDone && (
+            {canImport && (
               <Tooltip text={t('download_copy_to_library')}>
                 <button
                   onClick={handleImport}
@@ -316,7 +317,22 @@ export default function DownloadItem({ download }: { download: DownloadEntry }) 
 
   const cover = metadata?.cover;
   const isDone = status === 'done' || status === 'seeding';
+  const canReimport = status === 'error' || status === 'imported' || isDone;
   const TypeIcon = type === 'audiobook' ? Headphones : type === 'mixed' ? Layers : BookOpen;
+
+  const [reimporting, setReimporting] = useState(false);
+
+  async function handleReimport(e?: React.MouseEvent) {
+    e?.stopPropagation();
+    setReimporting(true);
+    try {
+      await downloadService.organize(id);
+    } catch {
+      /* error shown on next poll */
+    } finally {
+      setReimporting(false);
+    }
+  }
 
   async function handleRemove(e?: React.MouseEvent) {
     e?.stopPropagation();
@@ -399,15 +415,35 @@ export default function DownloadItem({ download }: { download: DownloadEntry }) 
           </div>
         </div>
 
-        {/* Remove */}
-        <Tooltip text={t('download_delete')}>
-          <button
-            onClick={handleRemove}
-            className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-lg text-red-400 bg-red-500/10 border border-red-500/25 hover:bg-red-500/20 transition-colors"
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-          </button>
-        </Tooltip>
+        {/* Actions */}
+        <div className="flex items-center gap-1.5 flex-shrink-0">
+          {canReimport && (
+            <Tooltip text={t('download_copy_to_library')}>
+              <button
+                onClick={handleReimport}
+                disabled={reimporting}
+                className="w-8 h-8 flex items-center justify-center rounded-lg text-indigo-400 bg-indigo-500/10 border border-indigo-500/25 hover:bg-indigo-500/20 transition-colors disabled:opacity-50"
+              >
+                {reimporting ? (
+                  <svg className="animate-spin w-3.5 h-3.5" viewBox="0 0 24 24" fill="none">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                  </svg>
+                ) : (
+                  <FolderInput className="w-3.5 h-3.5" />
+                )}
+              </button>
+            </Tooltip>
+          )}
+          <Tooltip text={t('download_delete')}>
+            <button
+              onClick={handleRemove}
+              className="w-8 h-8 flex items-center justify-center rounded-lg text-red-400 bg-red-500/10 border border-red-500/25 hover:bg-red-500/20 transition-colors"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          </Tooltip>
+        </div>
       </div>
 
       {showDetail && (
