@@ -9,6 +9,14 @@ import { createClient } from '../services/torrent';
 import logger from '../lib/logger';
 const router = express.Router();
 
+// All settings routes require admin role
+router.use((req, res, next) => {
+  if (req.user?.role !== 'admin') {
+    return res.status(403).json({ error: 'Admin access required' });
+  }
+  next();
+});
+
 // ============================================================
 // APP SETTINGS
 // ============================================================
@@ -69,10 +77,17 @@ router.put('/whisper', (req, res) => {
 
 router.get('/auth', (_req, res) => {
   const config = getConfig('app');
+  const profiles = (config.auth?.profiles || []).map((p) => ({
+    id: p.id,
+    name: p.name,
+    role: p.role,
+    hasPassword: !!p.passwordHash,
+  }));
   res.json({
     enabled: config.auth?.enabled || false,
     username: config.auth?.username || 'admin',
     passwordSet: !!config.auth?.passwordHash,
+    profiles,
   });
 });
 
@@ -83,7 +98,7 @@ router.put('/auth', async (req, res) => {
     password?: string;
   };
   const config = getConfig('app');
-  if (!config.auth) config.auth = { enabled: false, username: 'admin', passwordHash: '' };
+  if (!config.auth) config.auth = { enabled: false, username: 'admin', passwordHash: '', profiles: [] };
 
   if (typeof enabled === 'boolean') config.auth.enabled = enabled;
   if (username) config.auth.username = username;

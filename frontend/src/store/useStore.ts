@@ -4,6 +4,7 @@ import { DownloadEntry, ClientsConfig, ProwlarrConfig, Library, SearchResult } f
 interface User {
   username: string;
   role: string;
+  profileId?: string;
 }
 
 interface SearchParams {
@@ -26,9 +27,12 @@ interface StoreState {
   token: string | null;
   user: User | null;
   authEnabled: boolean;
+  profileId: string | null;
+  profileName: string | null;
   setToken: (token: string | null) => void;
   setUser: (user: User | null) => void;
   setAuthEnabled: (enabled: boolean) => void;
+  setProfile: (id: string | null, name: string | null) => void;
   logout: () => void;
 
   // Search
@@ -63,6 +67,8 @@ const useStore = create<StoreState>((set) => ({
   token: typeof window !== 'undefined' ? localStorage.getItem('omnibus_token') || null : null,
   user: null,
   authEnabled: false,
+  profileId: typeof window !== 'undefined' ? localStorage.getItem('omnibus_profile_id') || null : null,
+  profileName: typeof window !== 'undefined' ? localStorage.getItem('omnibus_profile_name') || null : null,
 
   setToken: (token) => {
     if (typeof window !== 'undefined') {
@@ -78,11 +84,26 @@ const useStore = create<StoreState>((set) => ({
   setUser: (user) => set({ user }),
   setAuthEnabled: (enabled) => set({ authEnabled: enabled }),
 
+  setProfile: (id, name) => {
+    if (typeof window !== 'undefined') {
+      if (id) {
+        localStorage.setItem('omnibus_profile_id', id);
+        localStorage.setItem('omnibus_profile_name', name || '');
+      } else {
+        localStorage.removeItem('omnibus_profile_id');
+        localStorage.removeItem('omnibus_profile_name');
+      }
+    }
+    set({ profileId: id, profileName: name });
+  },
+
   logout: () => {
     if (typeof window !== 'undefined') {
       localStorage.removeItem('omnibus_token');
+      localStorage.removeItem('omnibus_profile_id');
+      localStorage.removeItem('omnibus_profile_name');
     }
-    set({ token: null, user: null });
+    set({ token: null, user: null, profileId: null, profileName: null });
   },
 
   // Search

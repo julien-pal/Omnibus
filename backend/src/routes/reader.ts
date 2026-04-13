@@ -68,22 +68,22 @@ router.get('/file', (req, res) => {
 });
 
 // GET /api/reader/progress/all
-router.get('/progress/all', (_req, res) => {
-  res.json(getAllProgress());
+router.get('/progress/all', (req, res) => {
+  res.json(getAllProgress(req.user?.profileId));
 });
 
 // GET /api/reader/progress?bookPath=<bookPath>
 router.get('/progress', (req, res) => {
   const bookPath = req.query.bookPath as string;
   if (!bookPath) return res.status(400).json({ error: 'bookPath required' });
-  res.json(getProgress(bookPath));
+  res.json(getProgress(bookPath, req.user?.profileId));
 });
 
 // PATCH /api/reader/progress
 router.patch('/progress', (req, res) => {
   const { bookPath, cfi, page, chapterTitle, percentage, updatedAt, epubPath, snippet: clientSnippet } = req.body;
   if (!bookPath) return res.status(400).json({ error: 'bookPath required' });
-  const existing = getProgress(bookPath);
+  const existing = getProgress(bookPath, req.user?.profileId);
   let snippet: string | undefined = clientSnippet || undefined;
   if (!snippet && epubPath && cfi) {
     try {
@@ -101,8 +101,8 @@ router.patch('/progress', (req, res) => {
     percentage: percentage ?? existing?.percentage ?? 0,
     updatedAt: updatedAt ?? Date.now(),
   };
-  saveProgress(bookPath, entry);
-  const audio = getPlayerProgress(bookPath);
+  saveProgress(bookPath, entry, req.user?.profileId);
+  const audio = getPlayerProgress(bookPath, req.user?.profileId);
   const bookName = require('path').basename(bookPath);
   const fmt = (ts: number) => new Date(ts).toLocaleTimeString('fr-FR');
   logger.info(
@@ -116,7 +116,7 @@ router.post('/complete', (req, res) => {
   const { bookPath } = req.body;
   if (!bookPath) return res.status(400).json({ error: 'bookPath required' });
   const entry: ReaderProgressEntry = { percentage: 1, completed: true, updatedAt: Date.now() };
-  saveProgress(bookPath, entry);
+  saveProgress(bookPath, entry, req.user?.profileId);
   res.json(entry);
 });
 

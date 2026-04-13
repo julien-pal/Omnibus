@@ -375,7 +375,23 @@ async function organizeDownloadedFiles(
   if (stat.isFile()) {
     files = [savePath];
   } else if (stat.isDirectory()) {
-    files = walkDir(savePath).filter((f) => targetExts.has(path.extname(f).toLowerCase()));
+    const allFiles = walkDir(savePath).filter((f) => targetExts.has(path.extname(f).toLowerCase()));
+    // When the torrent contains multiple books (e.g. a trilogy), filter files
+    // to only include those matching the current book's title. Match against
+    // the filename or any parent directory name within the save path.
+    if (metadata.title && allFiles.length > 0) {
+      const titleLower = metadata.title.toLowerCase();
+      const matched = allFiles.filter((f) => {
+        const relativePart = path.relative(savePath, f).toLowerCase();
+        // Check if any segment (directory or filename) contains the title
+        const segments = relativePart.split(path.sep);
+        return segments.some((seg) => seg.includes(titleLower));
+      });
+      // Use filtered list only if it produced results; otherwise fall back to all files
+      files = matched.length > 0 ? matched : allFiles;
+    } else {
+      files = allFiles;
+    }
   }
 
   const existingDir = findExistingBookDir(destRoot, metadata) ?? undefined;

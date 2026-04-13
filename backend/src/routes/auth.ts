@@ -35,8 +35,8 @@ router.post('/login', async (req, res) => {
   if (!appConfig.auth || !appConfig.auth.enabled) {
     const secret = appConfig.jwtSecret;
     if (!secret) return res.status(500).json({ error: 'Server misconfigured: JWT secret not set' });
-    const token = jwt.sign({ username: 'admin', role: 'admin' }, secret, { expiresIn: '30d' });
-    return res.json({ token, user: { username: 'admin' } });
+    const token = jwt.sign({ username: 'admin', role: 'admin', profileId: 'default' }, secret, { expiresIn: '30d' });
+    return res.json({ token, user: { username: 'admin', role: 'admin' } });
   }
 
   if (username !== appConfig.auth.username) {
@@ -56,8 +56,8 @@ router.post('/login', async (req, res) => {
 
   const secret = appConfig.jwtSecret;
   if (!secret) return res.status(500).json({ error: 'Server misconfigured: JWT secret not set' });
-  const token = jwt.sign({ username, role: 'admin' }, secret, { expiresIn: '30d' });
-  res.json({ token, user: { username } });
+  const token = jwt.sign({ username, role: 'admin', profileId: 'default' }, secret, { expiresIn: '30d' });
+  res.json({ token, user: { username, role: 'admin' } });
 });
 
 // POST /api/auth/logout
@@ -71,11 +71,11 @@ router.get('/me', (req, res) => {
   const authEnabled = appConfig.auth?.enabled || false;
 
   // This route is outside the auth middleware, so decode the token manually
-  let user: { username: string; role: string } | null = null;
+  let user: { username: string; role: string; profileId?: string } | null = null;
   const authHeader = req.headers['authorization'];
   if (authHeader?.startsWith('Bearer ') && appConfig.jwtSecret) {
     try {
-      user = jwt.verify(authHeader.slice(7), appConfig.jwtSecret) as { username: string; role: string };
+      user = jwt.verify(authHeader.slice(7), appConfig.jwtSecret) as { username: string; role: string; profileId?: string };
     } catch {
       /* invalid/expired token */
     }
@@ -84,7 +84,7 @@ router.get('/me', (req, res) => {
   res.json({
     authEnabled,
     username: appConfig.auth?.username || 'admin',
-    user: user ? { username: user.username } : null,
+    user: user ? { username: user.username, role: user.role, profileId: user.profileId || null } : null,
   });
 });
 

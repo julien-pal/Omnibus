@@ -10,6 +10,7 @@ const translations = {
     nav_stats: 'Statistiques',
     nav_settings: 'Paramètres',
     nav_logout: 'Déconnexion',
+    nav_switch_profile: 'Changer de profil',
 
     // Settings tabs
     settings_title: 'Paramètres',
@@ -19,6 +20,38 @@ const translations = {
     tab_clients: 'Clients',
     tab_libraries: 'Bibliothèques',
     tab_cron: 'Planificateur',
+    tab_users: 'Utilisateurs',
+
+    // Profiles
+    profiles_title: 'Qui regarde ?',
+    profiles_select: 'Choisir un profil',
+    profiles_manage: 'Gérer les profils',
+    profiles_enter_password: 'Mot de passe',
+    profiles_wrong_password: 'Mot de passe incorrect.',
+    profiles_back: 'Retour',
+    profiles_confirm: 'Confirmer',
+    profiles_empty: 'Aucun profil configuré.',
+    profiles_empty_hint: 'Créez des profils dans Paramètres > Utilisateurs.',
+    profiles_create: 'Créer un profil',
+    profiles_first_admin: 'Le premier profil est toujours administrateur.',
+
+    // Users settings
+    users_title: 'Gestion des utilisateurs',
+    users_desc: 'Ajouter, modifier ou supprimer des profils.',
+    users_add: 'Ajouter un profil',
+    users_name: 'Nom',
+    users_role: 'Rôle',
+    users_role_admin: 'Admin',
+    users_role_user: 'Utilisateur',
+    users_password_optional: 'Mot de passe (optionnel)',
+    users_save: 'Enregistrer',
+    users_delete: 'Supprimer',
+    users_delete_confirm: 'Voulez-vous vraiment supprimer ce profil ?',
+    users_last_admin: 'Impossible de supprimer le dernier administrateur.',
+    users_created: 'Profil créé.',
+    users_updated: 'Profil mis à jour.',
+    users_deleted: 'Profil supprimé.',
+    users_cancel: 'Annuler',
 
     // General settings
     general_title: 'Général',
@@ -569,6 +602,7 @@ const translations = {
     nav_stats: 'Statistics',
     nav_settings: 'Settings',
     nav_logout: 'Logout',
+    nav_switch_profile: 'Switch profile',
 
     // Settings tabs
     settings_title: 'Settings',
@@ -578,6 +612,38 @@ const translations = {
     tab_clients: 'Clients',
     tab_libraries: 'Libraries',
     tab_cron: 'Scheduler',
+    tab_users: 'Users',
+
+    // Profiles
+    profiles_title: "Who's watching?",
+    profiles_select: 'Select a profile',
+    profiles_manage: 'Manage profiles',
+    profiles_enter_password: 'Password',
+    profiles_wrong_password: 'Incorrect password.',
+    profiles_back: 'Back',
+    profiles_confirm: 'Confirm',
+    profiles_empty: 'No profiles configured.',
+    profiles_empty_hint: 'Create profiles in Settings > Users.',
+    profiles_create: 'Create a profile',
+    profiles_first_admin: 'The first profile is always an administrator.',
+
+    // Users settings
+    users_title: 'User Management',
+    users_desc: 'Add, edit, or remove user profiles.',
+    users_add: 'Add Profile',
+    users_name: 'Name',
+    users_role: 'Role',
+    users_role_admin: 'Admin',
+    users_role_user: 'User',
+    users_password_optional: 'Password (optional)',
+    users_save: 'Save',
+    users_delete: 'Delete',
+    users_delete_confirm: 'Are you sure you want to delete this profile?',
+    users_last_admin: 'Cannot delete the last admin.',
+    users_created: 'Profile created.',
+    users_updated: 'Profile updated.',
+    users_deleted: 'Profile deleted.',
+    users_cancel: 'Cancel',
 
     // General settings
     general_title: 'General',

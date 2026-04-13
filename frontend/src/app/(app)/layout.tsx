@@ -6,7 +6,7 @@ import useStore from '@/store/useStore';
 import { authService } from '@/api/authService';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-  const { token, authEnabled, setAuthEnabled, setUser } = useStore();
+  const { token, authEnabled, setAuthEnabled, setUser, profileId } = useStore();
   const router = useRouter();
   const [ready, setReady] = useState(false);
 
@@ -18,6 +18,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         if (res.data.user) setUser(res.data.user);
         if (res.data.authEnabled && !res.data.user) {
           router.push('/login');
+        } else if (!profileId) {
+          // No profile selected — redirect to profile picker
+          router.push('/profiles');
         } else {
           setReady(true);
         }
@@ -25,7 +28,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       .catch(() => {
         setReady(true);
       });
-  }, [token]);
+  }, [token, profileId]);
 
   if (!ready) return null;
 

@@ -78,10 +78,18 @@ export interface LibrariesConfig {
 
 // ── App config ────────────────────────────────────────────────────────────────
 
+export interface Profile {
+  id: string;
+  name: string;
+  role: 'admin' | 'user';
+  passwordHash?: string;
+}
+
 export interface AuthConfig {
   enabled: boolean;
   username: string;
   passwordHash: string;
+  profiles: Profile[];
 }
 
 export interface RenamePatterns {
@@ -352,7 +360,7 @@ export interface LibraryStats {
 declare global {
   namespace Express {
     interface Request {
-      user?: { username: string; role: string; iat?: number; exp?: number };
+      user?: { username: string; role: string; profileId: string; iat?: number; exp?: number };
     }
   }
 }

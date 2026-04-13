@@ -19,7 +19,7 @@ export const settingsService = {
 
   // Auth
   getAuth() {
-    return apiClient.get('/settings/auth');
+    return apiClient.get<{ enabled: boolean; username: string; passwordSet: boolean; profiles: { id: string; name: string; role: 'admin' | 'user'; hasPassword: boolean }[] }>('/settings/auth');
   },
   updateAuth(data: Record<string, unknown>) {
     return apiClient.put('/settings/auth', data);

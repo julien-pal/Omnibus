@@ -77,15 +77,15 @@ router.get('/chapters', async (req, res) => {
 });
 
 // GET /api/player/progress/all
-router.get('/progress/all', (_req, res) => {
-  res.json(getAllProgress());
+router.get('/progress/all', (req, res) => {
+  res.json(getAllProgress(req.user?.profileId));
 });
 
 // GET /api/player/progress?bookPath=<book-dir-path>
 router.get('/progress', (req, res) => {
   const bookPath = req.query.bookPath as string;
   if (!bookPath) return res.status(400).json({ error: 'bookPath required' });
-  const progress = getProgress(bookPath);
+  const progress = getProgress(bookPath, req.user?.profileId);
   res.json(progress);
 });
 
@@ -100,7 +100,7 @@ router.post('/complete', (req, res) => {
     completed: true,
     updatedAt: Date.now(),
   };
-  saveProgress(bookPath, entry);
+  saveProgress(bookPath, entry, req.user?.profileId);
   res.json(entry);
 });
 
@@ -111,10 +111,10 @@ router.patch('/progress', (req, res) => {
 
   // Allow timestamp-only update (e.g. to align timestamps after cross-format sync)
   if (position === undefined && fileIndex === undefined) {
-    const existing = getProgress(bookPath);
+    const existing = getProgress(bookPath, req.user?.profileId);
     if (!existing) return res.status(404).json({ error: 'No progress found for this book' });
     const entry = { ...existing, updatedAt: updatedAt != null ? Number(updatedAt) : Date.now() };
-    saveProgress(bookPath, entry);
+    saveProgress(bookPath, entry, req.user?.profileId);
     res.json(entry);
     return;
   }
@@ -162,8 +162,8 @@ router.patch('/progress', (req, res) => {
     ...(snippet !== undefined && { snippet }),
     updatedAt: updatedAt != null ? Number(updatedAt) : Date.now(),
   };
-  saveProgress(bookPath, entry);
-  const reader = getReaderProgress(bookPath);
+  saveProgress(bookPath, entry, req.user?.profileId);
+  const reader = getReaderProgress(bookPath, req.user?.profileId);
   const bookName = path.basename(bookPath);
   const fmt = (ts: number) => new Date(ts).toLocaleTimeString('fr-FR');
   logger.info(

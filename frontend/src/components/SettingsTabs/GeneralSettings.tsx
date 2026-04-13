@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { AxiosError } from 'axios';
 import { Eye, EyeOff } from 'lucide-react';
+/* Eye/EyeOff still used by whisper/email sections */
 import { settingsService } from '@/api/settingsService';
 import { useT } from '@/i18n';
 import Tooltip from '@/components/Tooltip';
@@ -27,16 +28,7 @@ export default function GeneralSettings() {
     setSyncEnabled: s.setSyncEnabled,
   }));
 
-  // Auth state
-  const [enabled, setEnabled] = useState(false);
-  const [username, setUsername] = useState('admin');
-  const [password, setPassword] = useState('');
-  const [confirm, setConfirm] = useState('');
-  const [showPass, setShowPass] = useState(false);
   const [showWhisperKey, setShowWhisperKey] = useState(false);
-  const [authSaving, setAuthSaving] = useState(false);
-  const [authMismatch, setAuthMismatch] = useState(false);
-  const [passwordSet, setPasswordSet] = useState(false);
 
   // Rename state
   const [ebook, setEbook] = useState('{author}/{title}');
@@ -76,14 +68,6 @@ export default function GeneralSettings() {
   };
 
   useEffect(() => {
-    settingsService
-      .getAuth()
-      .then((res) => {
-        setEnabled(res.data.enabled || false);
-        setUsername(res.data.username || 'admin');
-        setPasswordSet(res.data.passwordSet || false);
-      })
-      .catch(() => {});
     settingsService
       .getApp()
       .then((res) => {
@@ -131,32 +115,6 @@ export default function GeneralSettings() {
       const e = err as import('axios').AxiosError<{ error: string }>;
       toast.error(e.response?.data?.error || e.message);
       setSyncEnabled(!next); // revert
-    }
-  }
-
-  async function handleAuthSave() {
-    if (password && password !== confirm) {
-      setAuthMismatch(true);
-      return;
-    }
-    setAuthMismatch(false);
-    setAuthSaving(true);
-    try {
-      const payload: { enabled: boolean; username: string; password?: string } = {
-        enabled,
-        username,
-      };
-      if (password) payload.password = password;
-      await settingsService.updateAuth(payload);
-      toast.success(t('auth_saved'));
-      setPassword('');
-      setConfirm('');
-      if (password) setPasswordSet(true);
-    } catch (err) {
-      const e = err as AxiosError<{ error: string }>;
-      toast.error(e.response?.data?.error || e.message);
-    } finally {
-      setAuthSaving(false);
     }
   }
 
@@ -298,117 +256,6 @@ export default function GeneralSettings() {
             </button>
           ))}
         </div>
-      </section>
-
-      <div className="border-t border-surface-border" />
-
-      {/* Authentication */}
-      <section className="space-y-4">
-        <div>
-          <h2 className="text-base font-semibold text-ink">{t('auth_title')}</h2>
-          <p className="text-sm text-ink-muted mt-1">{t('auth_desc')}</p>
-        </div>
-
-        <div className="flex items-center justify-between bg-surface-card border border-surface-border rounded-xl px-4 py-3.5">
-          <div>
-            <p className="text-sm font-medium text-ink">{t('auth_enable')}</p>
-            <p className="text-xs text-ink-muted mt-0.5">{t('auth_enable_desc')}</p>
-          </div>
-          <button
-            type="button"
-            onClick={async () => {
-              const next = !enabled;
-              setEnabled(next);
-              if (!next) {
-                // Disabling — save immediately
-                try {
-                  await settingsService.updateAuth({ enabled: false });
-                } catch {
-                  setEnabled(true);
-                }
-              }
-              // Enabling — wait for the user to fill the form and click save
-            }}
-            className={`relative w-11 h-6 rounded-full transition-colors flex-shrink-0 ${
-              enabled ? 'bg-indigo-500' : 'bg-surface-elevated border border-surface-border'
-            }`}
-          >
-            <span
-              className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
-                enabled ? 'translate-x-5' : 'translate-x-0'
-              }`}
-            />
-          </button>
-        </div>
-
-        {enabled && (
-          <>
-            <div className="space-y-3">
-              <div>
-                <label className="block text-xs text-ink-muted uppercase tracking-wide mb-1.5">
-                  {t('auth_username')}
-                </label>
-                <input
-                  type="text"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  className="input"
-                />
-              </div>
-              <div>
-                <label className="block text-xs text-ink-muted uppercase tracking-wide mb-1.5">
-                  {t('auth_password')}
-                  {passwordSet && (
-                    <span className="normal-case ml-1 text-ink-faint">
-                      {t('auth_password_set')}
-                    </span>
-                  )}
-                </label>
-                <div className="relative">
-                  <input
-                    type={showPass ? 'text' : 'password'}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder={passwordSet ? '••••••••' : t('auth_password_placeholder')}
-                    className="input pr-10"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPass((v) => !v)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-faint hover:text-ink-dim"
-                  >
-                    {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-              </div>
-              {password && (
-                <div>
-                  <label className="block text-xs text-ink-muted uppercase tracking-wide mb-1.5">
-                    {t('auth_confirm')}
-                  </label>
-                  <input
-                    type={showPass ? 'text' : 'password'}
-                    value={confirm}
-                    onChange={(e) => setConfirm(e.target.value)}
-                    className="input"
-                  />
-                </div>
-              )}
-            </div>
-
-            <div className="flex justify-end">
-              <button onClick={handleAuthSave} disabled={authSaving} className="btn-primary">
-                {authSaving ? t('auth_saving') : t('auth_save')}
-              </button>
-            </div>
-            {authMismatch && <p className="text-sm text-red-400">{t('auth_mismatch')}</p>}
-            {!passwordSet && !password && (
-              <div className="text-amber-400 text-sm bg-amber-500/10 border border-amber-500/20 rounded-xl px-4 py-3">
-                {t('auth_warning')}
-              </div>
-            )}
-          </>
-        )}
       </section>
 
       <div className="border-t border-surface-border" />

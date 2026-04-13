@@ -37,7 +37,8 @@ export function mergeBooksByTitle(books: ScannerBook[]): MergedBook[] {
     const isWishlist = !!(book.wishlist || sm.wishlist);
     const bookType = detectBookType(book);
     const wishFmt = sm.wishlistFormat || 'both';
-    const key = (book.title || '').toLowerCase().trim();
+    const series = (book.series || '').replace(/\s+#[\d.]+$/, '').toLowerCase().trim();
+    const key = (book.title || '').toLowerCase().trim() + '||' + series;
 
     const ebookPresent = !isWishlist && (bookType === 'ebook' || bookType === 'mixed');
     const audioPresent = !isWishlist && (bookType === 'audiobook' || bookType === 'mixed');
